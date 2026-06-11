@@ -1,0 +1,16 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Overview",
+      "description": "Repository-level entrypoint for the Due framework skill collection.",
+      "skills": ["due-skills"]
+    },
+    {
+      "title": "Due v2",
+      "description": "Due v2 framework references, examples, and development guidance.",
+      "skills": ["due-v2"]
+    }
+  ]
+}
