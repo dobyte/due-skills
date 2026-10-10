@@ -39,40 +39,51 @@ eventbus.SetEventbus(nats.NewEventbus())
 ### Publishing Events
 
 ```go
-// Publish event to a topic
-eventbus.Publish(context.Background(), "user.login", map[string]any{
-    "uid":    1,
-    "time":   time.Now().Unix(),
-    "status": "success",
-})
+// Publish an event to a topic
+if err := eventbus.Publish(context.Background(), "message", &Payload{
+    Message: "hello world",
+}); err != nil {
+    log.Errorf("publish event failed: %v", err)
+}
 ```
 
 ### Subscribing to Events
 
 ```go
-// Subscribe to events
-eventbus.Subscribe(context.Background(), "user.login", func(ctx context.Context, event eventbus.Event) error {
-    log.Infof("received login event: uid=%d", event.Data()["uid"])
-    return nil
+// Subscribe to events; the handler receives an *eventbus.Event
+sub, err := eventbus.Subscribe(context.Background(), "message", func(evt *eventbus.Event) {
+    payload := &Payload{}
+    if err := evt.Payload.Scan(payload); err != nil {
+        log.Errorf("scan payload failed: %v", err)
+        return
+    }
+    log.Infof("evt id: %s, topic: %s, payload message: %s", evt.ID, evt.Topic, payload.Message)
 })
+if err != nil {
+    log.Errorf("subscribe event failed: %v", err)
+    return
+}
 ```
 
 ### Unsubscribing
 
 ```go
-// Unsubscribe from events
-eventbus.Unsubscribe(context.Background(), "user.login", handler)
+// Cancel the subscription through the returned Subscription
+if err := sub.Unsubscribe(context.Background()); err != nil {
+    log.Errorf("unsubscribe event failed: %v", err)
+}
 ```
 
 ## Configuration
 
 ```toml
 [eventbus.nats]
-    addrs = ["127.0.0.1:4222"]
-    username = ""
-    password = ""
-    maxReconnects = 60
-    reconnectWait = "2s"
+    # Connection address, defaults to nats://127.0.0.1:4222
+    url = "nats://127.0.0.1:4222"
+    # Connection timeout, defaults to 2s
+    timeout = "2s"
+    # Key prefix
+    prefix = "due:eventbus"
 ```
 
 ## Running the Example
@@ -86,11 +97,11 @@ go run main.go
 
 ## API Reference
 
-- `eventbus.SetEventbus(eb Eventbus)` - Set global event bus
-- `eventbus.Publish(ctx, topic, data)` - Publish event
-- `eventbus.Subscribe(ctx, topic, handler)` - Subscribe to events
-- `eventbus.Unsubscribe(ctx, topic, handler)` - Unsubscribe
-- `eventbus.Close()` - Close event bus connection
+- `eventbus.SetEventbus(eb Eventbus)` - Set the global event bus
+- `eventbus.Publish(ctx, topic, message)` - Publish an event
+- `eventbus.Subscribe(ctx, topic, handler, balance...)` - Subscribe to events, returns a `Subscription`
+- `Subscription.Unsubscribe(ctx)` - Cancel a subscription
+- `eventbus.Close()` - Close the event bus
 
 ## Use Cases
 

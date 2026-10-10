@@ -66,7 +66,7 @@ go run main.go
 
 ## API Reference
 
-- `cache.Set(cache Cache)` - Set global cache instance
+- `cache.SetCache(cache Cache)` - Set global cache instance
 - `cache.Get(ctx, key)` - Get value from cache
 - `cache.Set(ctx, key, value, expiration)` - Set value with expiration
 - `cache.GetSet(ctx, key, fn)` - Get or create value

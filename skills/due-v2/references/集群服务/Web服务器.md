@@ -2,7 +2,7 @@
 
 ## 概述
 
-Web服务器是 Due 框架的HTTP服务组件，基于 Fiber 框架二次封装，提供高性能的Web服务能力。支持跨域、Swagger文档、中间件等特性。
+Web服务器是 Due 框架的HTTP服务组件，基于 Fiber v3 框架二次封装，提供高性能的Web服务能力。支持跨域、Swagger文档、中间件等特性。
 
 ## 包路径
 
@@ -32,6 +32,55 @@ import "github.com/dobyte/due/component/http/v2"
     keyFile = ""
     # 证书文件
     certFile = ""
+    # 是否禁用HEAD方法自动注册，默认为false
+    disableHeadAutoRegister = false
+    # 是否启用不可变路由，默认为false
+    immutable = false
+    # 是否unescape路径参数，默认为false
+    unescapePath = false
+    # 视图布局
+    viewsLayout = ""
+    # 是否将上下文 locals 传递给视图引擎
+    passLocalsToViews = false
+    # 读取缓冲区大小，默认为4096
+    readBufferSize = 4096
+    # 写入缓冲区大小，默认为4096
+    writeBufferSize = 4096
+    # 是否禁用keepalive，默认为false
+    disableKeepalive = false
+    # 是否禁用默认日期，默认为false
+    disableDefaultDate = false
+    # 是否禁用默认Content-Type，默认为false
+    disableDefaultContentType = false
+    # 是否禁用默认头部归一化，默认为false
+    disableHeaderNormalizing = false
+    # 是否流式请求体，默认为false
+    streamRequestBody = false
+    # 是否禁用预解析multipart/form-data，默认为false
+    disablePreParseMultipartForm = false
+    # 是否减少内存占用，默认为false
+    reduceMemoryUsage = false
+    # 是否启用IP验证，默认为false
+    enableIPValidation = false
+    # 是否启用在解析器上拆分请求体，默认为false
+    enableSplittingOnParsers = false
+
+    # 代理配置
+    [http.proxy]
+        # 代理头部，默认为 X-Forwarded-For
+        proxyHeader = "X-Forwarded-For"
+        # 信任代理配置
+        [http.proxy.trustProxy]
+            # 是否信任代理，默认为false
+            enable = false
+            # 受信任代理 IP 地址或 CIDR 范围的列表
+            proxies = []
+            # 是否信任所有链路本地 IP 范围
+            linkLocal = false
+            # 是否信任所有环回 IP 范围
+            loopback = false
+            # 是否信任所有私有 IP 范围
+            private = false
     
     # 跨域配置
     [http.cors]
@@ -78,33 +127,55 @@ import "github.com/dobyte/due/component/http/v2"
 // 创建Web服务器
 func NewServer(opts ...Option) *Server
 
-// 选项函数
-func WithMiddlewares(middlewares ...interface{}) Option
+// 常用选项函数
+func WithName(name string) Option
+func WithAddr(addr string) Option
+func WithCredentials(certFile, keyFile string) Option
+func WithConsole(enable bool) Option
+func WithRegistry(r registry.Registry) Option
+func WithTransporter(transporter transport.Transporter) Option
+func WithCorsOptions(corsOpts CorsOptions) Option
+func WithSwagOptions(swagOpts SwagOptions) Option
+func WithProxyOptions(proxyOpts ProxyOptions) Option
+func WithMiddlewares(middlewares ...any) Option
+func WithStrictRouting(enable bool) Option
+func WithCaseSensitive(enable bool) Option
+func WithBodyLimit(bodyLimit int) Option
+func WithConcurrency(concurrency int) Option
+func WithErrorHandler(errorHandler fiber.ErrorHandler) Option
 ```
 
 ### 服务器代理
 
 ```go
 type Proxy struct {
+    // 获取底层fiber应用
+    App() *fiber.App
     // 获取路由器
-    Router() *Router
+    Router() Router
+    // 创建网格客户端
+    NewMeshClient(target string) (transport.Client, error)
 }
 ```
 
 ### 路由器
 
 ```go
-type Router struct {
-    // 注册GET路由
-    Get(path string, handler Handler)
-    // 注册POST路由
-    Post(path string, handler Handler)
-    // 注册PUT路由
-    Put(path string, handler Handler)
-    // 注册DELETE路由
-    Delete(path string, handler Handler)
-    // 注册PATCH路由
-    Patch(path string, handler Handler)
+type Router interface {
+    // 注册路由，handlers 支持 due、fiber、express、net/http、fasthttp 等多种风格
+    Get(path string, handlers ...any) Router
+    Post(path string, handlers ...any) Router
+    Head(path string, handlers ...any) Router
+    Put(path string, handlers ...any) Router
+    Delete(path string, handlers ...any) Router
+    Connect(path string, handlers ...any) Router
+    Options(path string, handlers ...any) Router
+    Trace(path string, handlers ...any) Router
+    Patch(path string, handlers ...any) Router
+    All(path string, handlers ...any) Router
+    Add(methods []string, path string, handlers ...any) Router
+    // 路由分组
+    Group(prefix string, middlewares ...any) Router
 }
 ```
 
@@ -112,12 +183,18 @@ type Router struct {
 
 ```go
 type Context interface {
-    // 绑定请求参数
-    Bind() *Binder
+    // 内嵌 fiber.Ctx，可直接使用 fiber 上下文能力（如 Bind、Params、Query 等）
+    fiber.Ctx
+    // 返回底层 fiber.Ctx
+    CTX() fiber.Ctx
+    // 返回代理对象
+    Proxy() *Proxy
     // 成功响应
-    Success(data interface{}) error
-    // 失败响应
-    Failure(code codes.Code) error
+    Success(data ...any) error
+    // 失败响应（rst 支持 error、codes.Code、*codes.Code）
+    Failure(rst any) error
+    // 返回等价的 net/http 请求
+    StdRequest() *http.Request
 }
 ```
 
@@ -148,7 +225,7 @@ func main() {
     component := http.NewServer()
     // 初始化应用
     initApp(component.Proxy())
-    // 添加网格组件
+    // 添加HTTP组件
     container.Add(component)
     // 启动容器
     container.Serve()
@@ -240,7 +317,8 @@ package main
 
 import (
     "github.com/dobyte/due/component/http/v2"
-    "github.com/gofiber/fiber/v2"
+    "github.com/dobyte/due/v2/log"
+    "github.com/gofiber/fiber/v3"
 )
 
 func main() {
@@ -256,13 +334,13 @@ func main() {
 }
 
 // 日志中间件
-func loggerMiddleware(ctx *fiber.Ctx) error {
+func loggerMiddleware(ctx fiber.Ctx) error {
     log.Infof("Request: %s %s", ctx.Method(), ctx.Path())
     return ctx.Next()
 }
 
 // 认证中间件
-func authMiddleware(ctx *fiber.Ctx) error {
+func authMiddleware(ctx fiber.Ctx) error {
     token := ctx.Get("Authorization")
     if token == "" {
         return ctx.Status(401).JSON(fiber.Map{
@@ -272,6 +350,8 @@ func authMiddleware(ctx *fiber.Ctx) error {
     return ctx.Next()
 }
 ```
+
+框架还内置了基于 RFC 2617 的 Digest 认证中间件（`github.com/dobyte/due/component/http/v2/middleware/digestauth`），可通过 `digestauth.New(digestauth.Config{...})` 创建后作为中间件或路由分组中间件使用。
 
 ## 最佳实践
 
@@ -298,5 +378,6 @@ func authMiddleware(ctx *fiber.Ctx) error {
 ## 相关文件
 
 - Web源码：`github.com/dobyte/due/component/http/`
-- 配置示例：`examples/web-example/etc/etc.toml`
+- Swagger中间件：`github.com/dobyte/due/component/http/swagger/`
+- Digest认证中间件：`github.com/dobyte/due/component/http/middleware/digestauth/`
 - Fiber文档：https://docs.gofiber.io/

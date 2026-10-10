@@ -12,10 +12,10 @@ This example demonstrates how to use the Redis-based distributed lock in Due fra
 
 ## Features
 
-- Redis lock initialization
-- Acquire and release locks
-- Try-acquire with timeout
-- Automatic lock expiration
+- Redis lock maker initialization
+- Create a named locker and acquire/release it
+- Blocking acquire and try-acquire (with optional expiration)
+- Automatic lock expiration and renewal
 - Concurrent lock demonstration
 
 ## Project Structure
@@ -32,29 +32,27 @@ lock-redis/
 ### Lock Initialization
 
 ```go
-// Set global lock to Redis
-lock.SetLock(redis.NewLock())
+// Set the global lock maker to the Redis implementation
+lock.SetMaker(redis.NewMaker())
 ```
 
-### Acquiring Locks
+### Acquiring and Releasing Locks
 
 ```go
-// Acquire lock (blocks until acquired)
-ctx := context.Background()
-err := lock.Acquire(ctx, "resource:counter")
-if err != nil {
+// Create a locker by name, then acquire it (blocks until acquired)
+locker := lock.Make("lock")
+if err := locker.Acquire(ctx); err != nil {
     log.Errorf("acquire lock failed: %v", err)
     return
 }
-defer lock.Release(ctx, "resource:counter")
+defer locker.Release(ctx)
 ```
 
-### Try-Acquire with Timeout
+### Try-Acquire with Expiration
 
 ```go
-// Try to acquire lock with timeout
-err := lock.TryAcquire(ctx, "resource:counter", 5*time.Second)
-if err != nil {
+// Try to acquire the lock with an expiration; returns an error if it is held
+if err := locker.TryAcquire(ctx, 5*time.Second); err != nil {
     log.Warnf("lock not available: %v", err)
     return
 }
@@ -63,8 +61,10 @@ if err != nil {
 ### Releasing Locks
 
 ```go
-// Release lock
-lock.Release(ctx, "resource:counter")
+// Release the lock
+if err := locker.Release(ctx); err != nil {
+    log.Errorf("release lock failed: %v", err)
+}
 ```
 
 ## Configuration
@@ -76,6 +76,12 @@ lock.Release(ctx, "resource:counter")
     password = ""
     maxRetries = 3
     prefix = "due:lock"
+    # 锁默认过期时间，默认 3s
+    expiration = "3s"
+    # 获取锁的重试间隔，默认 20ms
+    acquireInterval = "20ms"
+    # 获取锁的最大重试次数，默认 0（无限重试）
+    acquireMaxRetries = 0
 ```
 
 ## Running the Example
@@ -89,11 +95,12 @@ go run main.go
 
 ## API Reference
 
-- `lock.SetLock(l Lock)` - Set global lock implementation
-- `lock.Acquire(ctx, key)` - Acquire lock (blocking)
-- `lock.TryAcquire(ctx, key, timeout)` - Try to acquire with timeout
-- `lock.Release(ctx, key)` - Release lock
-- `lock.IsLocked(ctx, key)` - Check if key is locked
+- `lock.SetMaker(maker lock.Maker)` – Set the global lock maker (closes the previous one)
+- `lock.GetMaker() lock.Maker` – Get the global lock maker
+- `lock.Make(name string) lock.Locker` – Create a locker by name via the global maker
+- `lock.Close() error` – Close the global maker
+- `lock.Maker` – `Make(name string) Locker`, `Close() error`
+- `lock.Locker` – `Acquire(ctx) error`, `TryAcquire(ctx, expiration ...time.Duration) error`, `Release(ctx) error`
 
 ## Use Cases
 

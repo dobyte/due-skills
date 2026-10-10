@@ -64,7 +64,7 @@ conn.Push(&cluster.Message{
 Key settings in `etc/etc.toml`:
 
 - **Client Settings**: Instance name, codec (json)
-- **TCP Client**: Dial address `127.0.0.1:3553`, timeout, heartbeat
+- **TCP Client**: Dial address `127.0.0.1:3553`, dial timeout (`dialTimeout`), heartbeat interval
 - **Packet**: Message format settings
 
 ## Running the Example

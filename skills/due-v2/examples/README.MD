@@ -57,7 +57,7 @@ To run an example:
 
 ## Requirements
 
-- Go 1.18 or higher
+- Go 1.27 or higher
 - Redis (for locator, cache, lock examples)
 - Consul (for service discovery examples)
 - NATS (for eventbus examples)

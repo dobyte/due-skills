@@ -8,6 +8,22 @@ license: MIT
 
 本技能包提供 Due v2 框架的完整参考文档和示例代码,帮助开发者深入理解框架的设计理念和核心机制,并快速上手开发。
 
+## 关键约定(速查)
+
+> 以下约定已对照框架源码(当前版本 `v2.6.2`)核实,编写代码前请先确认,避免使用不存在的 API:
+
+- **集群实例类型**:`Gate` / `Node` / `Mesh`(另有预留的 `Master`)。
+- **实例状态**:`Shut` / `Work` / `Busy` / `Hang`;`SetState` 只在 `Work`/`Busy` 间切换,`Close` → `Hang`,`Destroy` → `Shut`。
+- **生命周期 Hook**:`cluster.Init` / `cluster.Start` / `cluster.Close` / `cluster.Destroy`。
+- **集群事件**:`cluster.Connect` / `cluster.Reconnect` / `cluster.Disconnect`。
+- **路由选项**:`node.RouteOptions{Internal, Stateful, Authorized, Middlewares}`,预设 `node.InternalRoute` / `node.StatefulRoute` / `node.AuthorizedRoute`;**不存在 `StatelessRoute`**,默认即无状态路由。
+- **路由注册**:`proxy.AddRouteHandler(route int32, handler, opts ...RouteOptions)`;中间件签名为 `func(mw *node.Middleware, ctx node.Context)`,用 `mw.Next(ctx)` 继续;**不存在 `Router.Use` 与 `ctx.Abort()`**。
+- **网关分发策略**:`etc.cluster.gate.dispatch` = `random`(默认)/ `round-robin` / `weighted-round-robin`。
+- **并发模型**:节点默认单线程分发(dispatch 协程);`ctx.Task` 投递到全局协程池;`ctx.Next` 交调度器二次分发到 Actor。
+- **通信协议**:数据包 `size(4)|header(1)|route(n)|seq(m)|message(x)`,其中 `size = 1 + n + m + len(message)`(不含 4 字节 size 自身);header bit7=心跳、bit6=心跳时间;配置键前缀 `etc.packet.*`。
+- **会话类型**:`session.Conn` / `session.User`。
+- **用户定位**:`locate` 包,默认 Redis 实现;配置前缀 `locate.redis`(默认 `prefix = "due:locate"`)。
+
 ## 框架设计(references/框架设计/)
 
 | 文档 | 说明 |

@@ -35,17 +35,11 @@ third-redis/
 ### Client Initialization
 
 ```go
-// Single node
-client := redis.NewClient(&redis.Options{
-    Addr:     "127.0.0.1:6379",
-    Password: "",
-    DB:       0,
-})
+// Get a Redis client by name (config section: [redis.default])
+client := redis.Instance("default")
 
-// Cluster
-client := redis.NewClusterClient(&redis.ClusterOptions{
-    Addrs: []string{"127.0.0.1:7000", "127.0.0.1:7001"},
-})
+// A single-node, cluster or sentinel setup is selected automatically
+// by the underlying UniversalClient based on the configuration.
 ```
 
 ### Basic Operations
@@ -80,13 +74,17 @@ client.Publish(ctx, "channel", "message")
 ## Configuration
 
 ```toml
-[redis]
+[redis.default]
     addrs = ["127.0.0.1:6379"]
-    password = ""
     db = 0
-    poolSize = 10
-    minIdleConns = 5
+    username = ""
+    password = ""
     maxRetries = 3
+    poolSize = 200
+    minIdleConns = 10
+    dialTimeout = "5s"
+    readTimeout = "1s"
+    writeTimeout = "1s"
 ```
 
 ## Running the Example
@@ -100,8 +98,9 @@ go run main.go
 
 ## API Reference
 
-- `redis.NewClient(opts)` - Create single-node client
-- `redis.NewClusterClient(opts)` - Create cluster client
+- `redis.Instance(name...)` - Get a Redis client by name
+- `redis.NewInstance(config)` - Create a Redis client from config
+- `client.Ping(ctx)` - Ping the server
 - `client.Set/Get/Del` - String operations
 - `client.HSet/HGet/HDel` - Hash operations
 - `client.LPush/LPop/RPush/RPop` - List operations

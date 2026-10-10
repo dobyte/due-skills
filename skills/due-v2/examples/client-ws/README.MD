@@ -82,10 +82,9 @@ proxy.AddRouteHandler(greet, func(ctx *client.Context) {
 
 Edit `etc/etc.toml` to configure:
 
-- **Cluster Client**: Server address, codec settings
-- **Packet**: Byte order, header size, route size, sequence size
-- **Log**: Log level, time format, caller skip, output destinations
-- **Codec**: Message encoding/decoding settings
+- **Cluster Client**: Instance name, codec (`json`)
+- **WebSocket Client**: Dial URL `ws://127.0.0.1:3553`, dial timeout (`dialTimeout`), heartbeat interval
+- **Packet**: Byte order, route size, sequence size, buffer size
 
 ## Running the Example
 

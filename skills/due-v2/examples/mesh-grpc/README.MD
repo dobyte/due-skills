@@ -50,6 +50,12 @@ component := mesh.NewMesh(
     mesh.WithRegistry(registry),
     mesh.WithTransporter(transporter),
 )
+// The mesh must register at least one service provider, otherwise it exits on startup.
+initAPP(component.Proxy())
+
+func initAPP(proxy *mesh.Proxy) {
+    server.NewServer(proxy).Init()
+}
 ```
 
 ### Service Implementation
@@ -58,6 +64,10 @@ component := mesh.NewMesh(
 type Server struct {
     pb.UnimplementedGreeterServer
     proxy *mesh.Proxy
+}
+
+func (s *Server) Init() {
+    s.proxy.AddServiceProvider("greeter", &pb.Greeter_ServiceDesc, s)
 }
 
 func (s *Server) Hello(_ context.Context, args *pb.HelloArgs) (*pb.HelloReply, error) {

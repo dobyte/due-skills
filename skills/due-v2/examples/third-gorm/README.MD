@@ -17,7 +17,7 @@ This example demonstrates how to integrate GORM (Go Object Relational Mapping) w
 - Custom logger integration
 - JSON serializer support
 - Multi-instance support
-- Auto-migration
+- Transaction execution via `db.Connection`
 
 ## Project Structure
 
@@ -38,23 +38,25 @@ third-gorm/
 ### Database Initialization
 
 ```go
-// Initialize GORM with MySQL
-db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
-    Logger: logger.New(),
-})
-if err != nil {
-    log.Fatalf("failed to connect database: %v", err)
+// Get a GORM instance by name (config section: [mysql.default])
+db := gormcomp.Instance("default")
+
+// Run statements within a dedicated connection/transaction
+if err := db.Connection(func(tx *gorm.DB) error {
+    return nil
+}); err != nil {
+    log.Errorf("db connection error: %v", err)
 }
 ```
 
 ### Connection Pool
 
 ```go
-// Configure connection pool
-sqlDB, err := db.DB()
-sqlDB.SetMaxIdleConns(10)
-sqlDB.SetMaxOpenConns(100)
-sqlDB.SetConnMaxLifetime(3600 * time.Second)
+// Access the underlying *sql.DB to configure the pool
+database, err := db.DB()
+database.SetMaxIdleConns(50)
+database.SetMaxOpenConns(50)
+database.SetConnMaxLifetime(time.Hour)
 ```
 
 ### Model Definition
@@ -65,7 +67,7 @@ type User struct {
     Username  string         `gorm:"size:50;uniqueIndex"`
     Email     string         `gorm:"size:100"`
     Status    int            `gorm:"default:1"`
-    Extra     datatypes.JSON `gorm:"serializer:json"`
+    Extra     any            `gorm:"serializer:json"` // handled by the registered "json" serializer
     CreatedAt time.Time
     UpdatedAt time.Time
 }
@@ -91,17 +93,19 @@ db.Delete(&user)
 ## Configuration
 
 ```toml
-[gorm.mysql]
-    dsn = "root:password@tcp(127.0.0.1:3306)/mydb?charset=utf8mb4&parseTime=True&loc=Local"
-    maxIdleConns = 10
-    maxOpenConns = 100
+[mysql.default]
+    dsn = "root:123456@tcp(127.0.0.1:3306)/due_default?charset=utf8mb4&parseTime=True&loc=Local"
+    logLevel = "info"
+    maxIdleConns = 50
+    maxOpenConns = 50
+    slowThreshold = "2s"
     connMaxLifetime = "1h"
 ```
 
 ## Running the Example
 
 1. Ensure MySQL is running on `127.0.0.1:3306`
-2. Create database: `CREATE DATABASE mydb;`
+2. Create database: `CREATE DATABASE due_default;`
 3. Run:
 
 ```bash
@@ -110,7 +114,9 @@ go run main.go
 
 ## API Reference
 
-- `gorm.Open(dialect, config)` - Open database connection
+- `gorm.Instance(name...)` - Get a GORM instance by name
+- `gorm.NewInstance(config)` - Create a GORM instance from config
+- `db.Connection(fn)` - Run fn within a dedicated connection/transaction
 - `db.Create(value)` - Insert record
 - `db.First(dest, conditions...)` - Query first record
 - `db.Find(dest, conditions...)` - Query multiple records

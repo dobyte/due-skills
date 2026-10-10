@@ -15,7 +15,7 @@ This example demonstrates how to implement JWT (JSON Web Token) authentication i
 - JWT token generation and validation
 - Redis-based token storage
 - Token refresh mechanism
-- Middleware integration
+- HTTP request token extraction
 - User context extraction
 
 ## Project Structure
@@ -35,73 +35,61 @@ third-jwt/
 ### JWT Initialization
 
 ```go
-// Initialize JWT with Redis store
-store := jwt.NewRedisStore(redisClient)
-j := jwt.New(jwt.WithStore(store), jwt.WithSecret("your-secret-key"))
+// Get a JWT instance by name (config section: [jwt.default])
+ins := jwt.Instance("default")
 ```
 
 ### Token Generation
 
 ```go
-// Generate token for user
-token, err := j.GenerateToken(uid, map[string]any{
-    "username": "john",
-    "role":     "admin",
+// Generate a token; the identity key carries the user ID
+token, err := ins.GenerateToken(jwt.Payload{
+    ins.IdentityKey(): 1,
+    "nickname":        "fuxiao",
 })
+// token.Token is the signed JWT string
 ```
 
 ### Token Validation
 
 ```go
-// Validate and parse token
-claims, err := j.ParseToken(tokenString)
-if err != nil {
-    // Invalid token
-}
-uid := claims.UID()
+// Parse and verify the payload from a token string
+payload, err := ins.ExtractPayload(token.Token)
 ```
 
 ### Middleware Integration
 
 ```go
-// JWT authentication middleware
-func jwtAuth(middleware *node.Middleware, ctx node.Context) {
-    token := ctx.Header("Authorization")
-    claims, err := j.ParseToken(token)
-    if err != nil {
-        ctx.Response(&baseRes{Code: codes.Unauthorized.Code()})
-        return
-    }
-    ctx.Set("uid", claims.UID())
-    middleware.Next(ctx)
-}
-
-// Apply to routes
-proxy.Router().Group(func(group *node.RouterGroup) {
-    group.Middleware(jwtAuth)
-    group.AddRouteHandler(getProfile, getProfileHandler)
-})
+// Extract the authenticated identity from an incoming HTTP request
+identity, err := ins.Http().ExtractIdentity(r)
 ```
 
 ### Token Refresh
 
 ```go
-// Refresh token
-newToken, err := j.RefreshToken(oldToken)
+// Refresh a token before it expires
+newToken, err := ins.RefreshToken(token.Token)
 ```
 
 ## Configuration
 
 ```toml
-[jwt]
-    secret = "your-secret-key"
-    expiration = "24h"
-    refreshExpiration = "7d"
+[jwt.default]
+    issuer = "due"
+    validDuration = 7200
+    secretKey = "xxxx"
+    identityKey = "uid"
+    locations = "query:token,header:Authorization"
 
-[redis]
-    addrs = ["127.0.0.1:6379"]
-    db = 0
-    prefix = "jwt"
+    [jwt.default.store]
+        addrs = ["127.0.0.1:6379"]
+        db = 0
+        password = ""
+        poolSize = 200
+        minIdleConns = 10
+        dialTimeout = "5s"
+        readTimeout = "1s"
+        writeTimeout = "1s"
 ```
 
 ## Running the Example
@@ -115,12 +103,15 @@ go run main.go
 
 ## API Reference
 
-- `jwt.New(opts...)` - Create JWT instance
-- `j.GenerateToken(uid, claims)` - Generate token
-- `j.ParseToken(token)` - Parse and validate token
-- `j.RefreshToken(token)` - Refresh token
-- `j.RevokeToken(token)` - Revoke token
-- `j.IsRevoked(token)` - Check if token is revoked
+- `jwt.Instance(name...)` - Get a JWT instance by name
+- `jwt.NewInstance(config)` - Create a JWT instance from config
+- `ins.GenerateToken(payload)` - Generate a token
+- `ins.ExtractPayload(token)` - Parse and verify a token's payload
+- `ins.ExtractIdentity(token)` - Extract the identity from a token
+- `ins.RefreshToken(token)` - Refresh a token
+- `ins.DestroyToken(token)` - Destroy a token
+- `ins.IdentityKey()` - Get the configured identity key
+- `ins.Http()` - HTTP request helpers (`ExtractPayload`, `ExtractIdentity`, `Middleware`, ...)
 
 ## Use Cases
 

@@ -13,8 +13,8 @@ This example demonstrates how to use the Actor concurrency model in Due framewor
 ## Features
 
 - Actor-based concurrency for game room management
-- Middleware authentication with JWT-like token verification
-- Room creation, joining, and message broadcasting
+- Middleware authentication based on UID
+- Room creation, joining, and game actions
 - Processor pattern for room lifecycle management
 - Structured application layout (app/logic/middleware/route)
 
@@ -28,7 +28,7 @@ actor-model/
 └── app/
     ├── app.go                 # Application initialization
     ├── base/
-    │   └── base.go            # Base processor with common fields
+    │   └── base.go            # Base response struct
     ├── logic/
     │   ├── core.go            # Core game logic
     │   ├── protocol.go        # Request/response message definitions
@@ -45,43 +45,54 @@ actor-model/
 ### Actor Processor
 
 ```go
-type RoomProcessor struct {
-    base.BaseProcessor
-    room *Room
+type roomProcessor struct {
+    node.BaseProcessor
+    actor *node.Actor
+    room  *room
 }
 
-func (p *RoomProcessor) Init(ctx node.Context) {
-    // Room initialization
-    p.room = NewRoom()
+func newRoomProcessor(actor *node.Actor, args ...any) node.Processor {
+    return &roomProcessor{
+        actor: actor,
+        room:  args[0].(*room),
+    }
 }
 
-func (p *RoomProcessor) Start(ctx node.Context) {
-    // Start room processing
-}
-
-func (p *RoomProcessor) Destroy(ctx node.Context) {
-    // Cleanup
+func (p *roomProcessor) Init() {
+    p.actor.AddRouteHandler(route.Join, p.join)
+    p.actor.AddRouteHandler(route.Play, p.play)
 }
 ```
 
 ### Actor Registration
 
 ```go
-proxy.Router().AddRouteHandler(createRoom, createRoomHandler)
-proxy.Router().AddRouteHandler(joinRoom, joinRoomHandler, node.AuthorizedRoute)
-proxy.Router().AddRouteHandler(sendMessage, sendMessageHandler, node.StatefulRoute)
+proxy.Router().Group(func(group *node.RouterGroup) {
+    // Login
+    group.AddRouteHandler(route.Login, c.login)
+    // Set the auth middleware for the following routes
+    group.Middleware(middleware.Auth)
+    // Create room
+    group.AddRouteHandler(route.Create, c.create, node.AuthorizedRoute)
+    // Join room
+    group.AddRouteHandler(route.Join, c.join, node.AuthorizedRoute)
+    // Play
+    group.AddRouteHandler(route.Play, c.play, node.StatefulRoute)
+})
 ```
 
-### Message Broadcasting
+### Actor Spawning
 
 ```go
-ctx.Broadcast(&cluster.MulticastArgs{
-    UIDs: room.GetMembers(),
-    Message: &cluster.Message{
-        Route: broadcastRoute,
-        Data:  msg,
-    },
-})
+actor, err := c.proxy.Spawn(newRoomProcessor,
+    node.WithActorID(xconv.String(r.id)),
+    node.WithActorArgs(r),
+    node.WithActorKind(roomActor),
+)
+if err != nil {
+    log.Errorf("spawn actor failed: %v", err)
+    return
+}
 ```
 
 ## Configuration

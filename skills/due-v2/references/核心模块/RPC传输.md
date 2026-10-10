@@ -37,6 +37,8 @@ import (
     caFile = ""
     # 证书域名
     serverName = ""
+    # 分发策略。支持策略：随机（random）、轮询（rr）、加权轮询（wrr）、一致性哈希（ch）。默认为rr
+    dispatch = "rr"
 ```
 
 ### 使用示例
@@ -84,6 +86,10 @@ func main() {
     caFile = ""
     # 证书域名
     serverName = ""
+    # 连接池大小，默认为10
+    poolSize = 10
+    # 分发策略。支持策略：随机（random）、轮询（rr）、加权轮询（wrr）、一致性哈希（ch）。默认为rr
+    dispatch = "rr"
 ```
 
 ### 使用示例
@@ -113,10 +119,38 @@ func main() {
 
 ```go
 type Transporter interface {
-    // 设置默认的服务发现组件
-    SetDefaultDiscovery(discovery registry.Registry)
-    // 创建客户端连接
+    // 获取传输器组件名称
+    Name() string
+    // 创建服务端
+    NewServer() (Server, error)
+    // 创建客户端连接。target 支持三种形式：
+    //   direct://127.0.0.1:8011                通过地址直连
+    //   direct://711baf8d-8a06-11ef-b7df-...   通过实例ID直连
+    //   discovery://service_name               通过服务名进行服务发现
     NewClient(target string) (Client, error)
+    // 设置默认的服务发现组件。仅在客户端尚未配置服务发现组件时生效
+    SetDefaultDiscovery(discovery registry.Discovery)
+    // 关闭传输器并释放所有客户端连接与资源
+    Close() error
+}
+```
+
+### 服务端接口
+
+```go
+type Server interface {
+    // 启动服务端
+    Start() error
+    // 停止服务端
+    Stop() error
+    // 监听地址
+    Addr() string
+    // 协议方案（grpc/rpcx）
+    Scheme() string
+    // 服务端点
+    Endpoint() *endpoint.Endpoint
+    // 注册服务。desc 为服务描述：grpc 为 desc 对象，rpcx 为服务路径字符串
+    RegisterService(desc, service any) error
 }
 ```
 
@@ -124,10 +158,10 @@ type Transporter interface {
 
 ```go
 type Client interface {
+    // 调用服务方法
+    Call(ctx context.Context, service, method string, args any, reply any, opts ...any) error
     // 获取底层客户端连接
-    Client() interface{}
-    // 关闭连接
-    Close() error
+    Client() any
 }
 ```
 
@@ -140,7 +174,6 @@ import (
     "context"
     "github.com/dobyte/due/transport/grpc/v2"
     "github.com/dobyte/due/v2/cluster/mesh"
-    "google.golang.org/grpc"
 )
 
 type Server struct {
@@ -213,8 +246,9 @@ func main() {
 ## 最佳实践
 
 1. **服务发现**:
-   - 使用 `discovery://` 前缀进行服务发现
-   - 配合注册中心实现动态路由
+   - `discovery://service_name`：通过服务名进行服务发现，配合注册中心实现动态路由
+   - `direct://127.0.0.1:8011`：通过地址直连
+   - `direct://<实例ID>`：通过实例ID直连
 
 2. **安全性**:
    - 生产环境启用TLS加密
@@ -230,6 +264,7 @@ func main() {
 
 ## 相关文件
 
-- GRPC 传输器源码:`github.com/dobyte/due/transport/grpc/`
-- RPCX 传输器源码:`github.com/dobyte/due/transport/rpcx/`
+- 传输层抽象接口：`github.com/dobyte/due/v2/transport`
+- GRPC 传输器源码:`github.com/dobyte/due/transport/grpc/v2`
+- RPCX 传输器源码:`github.com/dobyte/due/transport/rpcx/v2`
 - 配置示例:`examples/*/etc/etc.toml`

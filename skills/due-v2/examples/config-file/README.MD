@@ -33,46 +33,40 @@ config-file/
 ### Configuration Source
 
 ```go
-// Set file configuration source
-config.SetSource(file.NewSource(
-    file.WithPath("config"),
+// Set the file configurator as the global configurator
+config.SetConfigurator(config.NewConfigurator(
+    config.WithSources(file.NewSource()),
 ))
 ```
 
 ### Reading Configuration
 
 ```go
-// Get configuration value
-value := config.Get("database.host")
-port := config.GetInt("server.port")
-debug := config.GetBool("app.debug")
+// Read a config value (returns a value.Value)
+timezone := config.Get("config.timezone").String()
 ```
 
 ### Watching Configuration
 
 ```go
-// Watch for configuration changes
-config.Watch("database", func(event config.Event) {
-    log.Infof("config changed: %v", event)
-})
+// Watch for configuration changes; the callback receives the names of the changed configs
+config.Watch(func(names ...string) {
+    log.Infof("config changed: %v", names)
+}, "config")
 ```
 
 ## Configuration Format
 
 ```toml
-[database]
-    host = "127.0.0.1"
-    port = 3306
-    name = "mydb"
-    user = "root"
+# etc/etc.toml - framework configuration
+[config.file]
+    # Config file or directory path
+    path = "./config"
+    # Read-write mode. Options: read-only | write-only | read-write, defaults to read-only
+    mode = "read-write"
 
-[server]
-    port = 8080
-    timeout = "30s"
-
-[app]
-    debug = true
-    name = "my-app"
+# config/config.toml - application configuration
+timezone = "UTC"
 ```
 
 ## Running the Example
@@ -83,13 +77,13 @@ go run main.go
 
 ## API Reference
 
-- `config.SetSource(source Source)` - Set configuration source
-- `config.Get(key)` - Get value (returns `Value` interface)
-- `config.GetInt/GetString/GetBool` - Get typed values
-- `config.Has(key)` - Check if key exists
-- `config.Watch(key, handler)` - Watch for changes
-- `config.Load()` - Reload configuration
-- `config.Store(file, content)` - Save configuration
+- `config.SetConfigurator(configurator Configurator)` - Set the global configurator
+- `config.NewConfigurator(opts...)` / `config.WithSources(sources...)` - Build a configurator from sources
+- `config.Get(pattern, def...)` - Get a value (returns `value.Value`)
+- `config.Has(pattern)` - Check whether a config exists
+- `config.Watch(cb, names...)` - Watch for config changes
+- `config.Load(ctx, source, file...)` - Load the config of a source
+- `config.Store(ctx, source, file, content, override...)` - Save config to a source
 
 ## Use Cases
 

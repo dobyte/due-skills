@@ -50,6 +50,12 @@ component := mesh.NewMesh(
     mesh.WithRegistry(registry),
     mesh.WithTransporter(transporter),
 )
+// 网格必须注册至少一个服务提供者，否则启动时会直接退出。
+initAPP(component.Proxy())
+
+func initAPP(proxy *mesh.Proxy) {
+    server.NewServer(proxy).Init()
+}
 ```
 
 ### 服务实现
@@ -58,6 +64,10 @@ component := mesh.NewMesh(
 type Server struct {
     pb.UnimplementedGreeterServer
     proxy *mesh.Proxy
+}
+
+func (s *Server) Init() {
+    s.proxy.AddServiceProvider("greeter", &pb.Greeter_ServiceDesc, s)
 }
 
 func (s *Server) Hello(_ context.Context, args *pb.HelloArgs) (*pb.HelloReply, error) {

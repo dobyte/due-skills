@@ -17,7 +17,7 @@ This example demonstrates how to set up a WebSocket gateway server in the Due fr
 - Service discovery via Consul
 - Connection management
 - Cross-origin support
-- Handshake timeout configuration
+- Heartbeat mechanism configuration
 
 ## Project Structure
 
@@ -56,8 +56,8 @@ Key configuration sections in `etc/etc.toml`:
   - Connection path `/`
   - Max connections: 5000
   - Origins: `["*"]` (allow all)
-  - Handshake timeout: 10s
   - Heartbeat interval: 10s
+  - Heartbeat mechanism: resp
 
 ## Running the Example
 

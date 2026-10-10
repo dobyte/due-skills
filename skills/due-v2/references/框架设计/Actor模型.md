@@ -18,7 +18,17 @@ Actor 是并发编程中的独立实体，具有以下特征：
 
 ### Processor（处理器）
 
-每个 Actor 关联一个 Processor，负责处理 Actor 接收到的消息路由：
+每个 Actor 关联一个 Processor。Processor 接口只定义三个生命周期回调，自定义处理器通常嵌入 `node.BaseProcessor` 以省略不需要实现的回调：
+
+```go
+type Processor interface {
+    Init()    // 初始化回调
+    Start()   // 启动回调
+    Destroy() // 销毁回调
+}
+```
+
+在 `Init()` 中通过 `actor.AddRouteHandler()` 为 Actor 注册消息路由：
 
 ```go
 type roomProcessor struct {
@@ -60,16 +70,32 @@ func (p *roomProcessor) Init() {
 
 ### 创建 Actor（Spawn）
 
-通过 `proxy.Spawn()` 创建 Actor 实例：
+通过 `proxy.Spawn()`（也可用 `ctx.Spawn()`、`actor.Spawn()`）创建 Actor 实例。第一个参数是 `Creator`，签名为 `func(actor *Actor, args ...any) Processor`，用于创建 Actor 的处理器；后续是可变参数 `ActorOption`：
 
 ```go
 actor, err := proxy.Spawn(
     newRoomProcessor,                          // Processor 构造函数
-    node.WithActorID(xconv.String(room.id)),   // Actor ID
+    node.WithActorKind(roomActor),              // Actor 类型标识（必填）
+    node.WithActorID(xconv.String(room.id)),   // Actor ID（必填）
     node.WithActorArgs(room),                   // 传递给 Processor 的参数
-    node.WithActorKind(roomActor),              // Actor 类型标识
 )
 ```
+
+常用 `ActorOption`：
+
+| 选项 | 说明 |
+|------|------|
+| `WithActorKind(kind string)` | 设置 Actor 类型（必填） |
+| `WithActorID(id string)` | 设置 Actor ID（必填） |
+| `WithActorArgs(args ...any)` | 设置传递给 Creator 的参数 |
+| `WithActorNonWait()` | 节点关闭时不等候该 Actor |
+| `WithActorNonDispatch()` | 该 Actor 不参与调度器的消息分发 |
+| `WithActorTaskQueueSize(size int32)` | 设置任务队列容量 |
+| `WithActorTaskWriteTimeout(timeout time.Duration)` | 设置任务写入超时 |
+| `WithActorMessageQueueSize(size int32)` | 设置消息队列容量 |
+| `WithActorMessageWriteTimeout(timeout time.Duration)` | 设置消息写入超时 |
+
+Actor 的类型（kind）与 ID 组合唯一，重复创建会返回错误。
 
 ### 绑定 Actor（BindActor）
 
@@ -109,25 +135,51 @@ if !ok {
 actor.Next(ctx)
 ```
 
-### 销毁 Actor（actor.Destroy）
+### 销毁 Actor（actor.Destroy / ctx.Kill）
 
-销毁 Actor 实例并释放资源：
+销毁 Actor 实例并释放资源，`actor.Destroy()` 返回是否销毁成功；也可以按类型和 ID 通过 `ctx.Kill()`（或 `proxy.Kill()`）销毁：
 
 ```go
 actor.Destroy()
+
+ok := ctx.Kill(roomActor, xconv.String(roomID))
 ```
+
+### Actor 内的线程安全调用（Invoke / AfterFunc / AfterInvoke）
+
+在 Actor 处理器内调用 `ctx.Invoke()` / `ctx.AfterFunc()` / `ctx.AfterInvoke()` 时，会自动转发到当前 Actor 的对应方法，把函数写入 Actor 的任务队列串行执行，从而保证线程安全；在全局处理器中则转发到 `proxy`：
+
+```go
+// Actor 处理器内：函数被投递到该 Actor 的任务队列，串行执行
+if err := ctx.Invoke(func() {
+    // 安全地修改 Actor 内部状态
+}, true); err != nil { // 第二个参数为 true 时同步等待执行完成，默认非阻塞
+    log.Errorf("invoke failed: %v", err)
+}
+
+// 延时调用，同样在 Actor 内串行执行
+timer, err := ctx.AfterInvoke(time.Second, func() {
+    // ...
+})
+```
+
+`proxy.Invoke()`、`actor.Invoke()` 等也提供了对应的线程安全调用入口；`actor.AfterFunc()` 只是延时执行、不保证与 Actor 内部状态串行，`actor.AfterInvoke()` 则经任务队列串行执行。
+
+### Actor 生命周期
+
+Actor 由 `spawn` 创建后即处于 started 状态，只有一个 dispatch 协程串行消费它的消息队列与任务队列；调用 `Destroy()` / `Kill()` 会将其置为 destroyed，解绑所有绑定的用户、关闭队列并回调 `Processor.Destroy()`。Actor 没有单独的“空闲”状态——空闲时其 dispatch 协程只是阻塞等待队列。默认情况下节点关闭会等待其 Actor 结束，可用 `WithActorNonWait()` 让节点不再等候；`WithActorNonDispatch()` 创建的 Actor 不参与调度器的消息分发。
 
 ## 消息路由模式
 
 ### 有状态路由（StatefulRoute）
 
-绑定 Actor 后，使用 `node.StatefulRoute` 路由类型，消息自动分发到绑定的 Actor：
+`node.StatefulRoute` 保证消息被网关路由到用户所绑定的节点服（依赖 `ctx.BindNode()` 建立的绑定）。到达节点服后，处理器调用 `ctx.Next()` 触发调度器的二次分发：调度器根据路由号找到注册了该路由的 Actor 类型，再根据当前 UID 找到与之绑定的 Actor（由 `ctx.BindActor()` 建立），最终把消息投递到该 Actor 的消息队列串行处理：
 
 ```go
 group.AddRouteHandler(route.Play, c.play, node.StatefulRoute)
 ```
 
-处理器中通过 `ctx.Next()` 将消息转发给 Actor：
+处理器中通过 `ctx.Next()` 将消息交给调度器分发给 Actor：
 
 ```go
 func (c *core) play(ctx node.Context) {
@@ -145,9 +197,11 @@ func (c *core) play(ctx node.Context) {
 }
 ```
 
+可见 Actor 的分发依赖两个条件：Actor 在 `Init()` 中通过 `actor.AddRouteHandler()` 注册了对应路由号，且当前用户通过 `ctx.BindActor()` 绑定到了该 Actor。
+
 ### 已认证路由（AuthorizedRoute）
 
-需要用户已绑定网关（UID > 0）才能访问：
+消息跨集群流转（客户端 → 网关 → 节点）时必须携带 UID，否则无法投递；网关可据此提前拦截未认证连接：
 
 ```go
 group.AddRouteHandler(route.Create, c.create, node.AuthorizedRoute)
@@ -161,9 +215,9 @@ group.AddRouteHandler(route.Create, c.create, node.AuthorizedRoute)
 mkdir actor-example
 cd actor-example
 go mod init actor-example
-go get github.com/dobyte/due/v2@v2.4.2
-go get github.com/dobyte/due/locate/redis/v2@e5cd009
-go get github.com/dobyte/due/registry/consul/v2@e5cd009
+go get github.com/dobyte/due/v2@v2.6.2
+go get github.com/dobyte/due/locate/redis/v2
+go get github.com/dobyte/due/registry/consul/v2
 ```
 
 ### 路由定义
@@ -309,7 +363,7 @@ func (p *roomProcessor) play(ctx node.Context) {
 |------|-----------|-----------|-----------|
 | 执行顺序 | 严格有序 | 无序 | Actor 内有序 |
 | 并发安全 | 天然安全 | 需同步原语 | 天然安全 |
-| 阻塞影响 | 阻塞整个进程 | 仅阻塞当前协程 | 仅阻塞当前 Actor |
+| 阻塞影响 | 阻塞分发协程 | 仅阻塞当前协程 | 仅阻塞当前 Actor |
 | 适用场景 | 帧同步/状态同步 | IO 密集型 | 房间类游戏 |
 | 实现复杂度 | 低 | 中 | 中高 |
 
