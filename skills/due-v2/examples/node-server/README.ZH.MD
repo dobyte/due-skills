@@ -73,7 +73,7 @@ func greetHandler(ctx node.Context) {
 
 编辑 `etc/etc.toml` 来配置：
 
-- **节点设置**：实例 ID、名称、RPC 地址、编解码器、超时
+- **节点设置**：实例 ID、名称、RPC 地址、编解码器
 - **Redis 定位器**：用户位置追踪的连接设置
 - **Consul 注册中心**：服务发现配置
 - **数据包设置**：消息格式和大小限制

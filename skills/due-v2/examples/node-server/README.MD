@@ -73,7 +73,7 @@ func greetHandler(ctx node.Context) {
 
 Edit `etc/etc.toml` to configure:
 
-- **Node Settings**: Instance ID, name, RPC address, codec, timeout
+- **Node Settings**: Instance ID, name, RPC address, codec
 - **Redis Locator**: Connection settings for user location tracking
 - **Consul Registry**: Service discovery configuration
 - **Packet Settings**: Message format and size limits

@@ -30,7 +30,8 @@ Complete Due v2 framework development reference, including:
 - Core modules: networking, service registration, user locating, RPC transport, cryptography, distributed locks, cache, configuration center, event bus, and logging.
 - Cluster services: gate server, node server, mesh server, web server, and client usage.
 - Third-party integrations: GORM, Redis, MongoDB, JWT, and Casbin.
-- Runnable examples under `skills/due-v2/examples/`.
+- Engineering conventions: how to start a Due project from scratch (architecture, layout, naming, protocol, build and delivery, configuration).
+- Runnable examples under `skills/due-v2/examples/` (including a multi-service project skeleton at `examples/example-server/`).
 
 ## Usage Examples
 
@@ -46,4 +47,8 @@ Use the due-v2 skill to explain how gate binding and node binding work.
 
 ```text
 Use the due-v2 skill to choose the right runtime mode and configuration pattern for a production deployment.
+```
+
+```text
+Use the due-v2 skill to scaffold a multi-service Due project skeleton.
 ```

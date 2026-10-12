@@ -88,8 +88,6 @@ func main() {
     serverName = ""
     # 连接池大小，默认为10
     poolSize = 10
-    # 分发策略。支持策略：随机（random）、轮询（rr）、加权轮询（wrr）、一致性哈希（ch）。默认为rr
-    dispatch = "rr"
 ```
 
 ### 使用示例

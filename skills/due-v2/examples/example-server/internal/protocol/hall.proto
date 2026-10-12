@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package hall;
+
+import "base.proto";
+import "common.proto";
+
+option go_package = "example-server/internal/protocol/hall;hall";
+
+// 大厅路由号段 [1000, 1999]。路由号即消息的流转标识，分配后禁止复用。
+enum Route {
+  None = 0;              // 无效路由
+  ValidateToken = 1000;  // 校验TOKEN（无状态路由）
+  FetchProfile = 1001;   // 拉取个人资料（授权路由）
+  ModifyNickname = 1002; // 修改昵称（授权路由）
+}
+
+// 校验TOKEN
+message ValidateTokenReq {
+  string token = 1; // 登录令牌
+}
+
+message ValidateTokenRes {
+  base.Res res = 1; // 错误响应
+  int64 uid = 2;    // 用户ID
+}
+
+// 拉取个人资料
+message FetchProfileReq {}
+
+message FetchProfileRes {
+  base.Res res = 1;        // 错误响应
+  common.UserInfo user = 2; // 用户信息
+}
+
+// 修改昵称
+message ModifyNicknameReq {
+  string nickname = 1; // 新昵称
+}
+
+message ModifyNicknameRes {
+  base.Res res = 1; // 错误响应
+}

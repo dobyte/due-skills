@@ -1,0 +1,282 @@
+# 本文件由 scripts/gen-etc.sh 依据框架最新版自带的 etc 模板动态生成。
+# 角色：hall。按角色裁剪 section 并保留配置项注释。请勿手工编辑；
+# 需要调整时请改裁剪规则或升级框架版本后重新生成。
+
+# 进程号
+pid = "./run/hall.pid"
+# 开发模式。支持模式：debug、test、pre-release、release（设置优先级：配置文件 < 环境变量 < 运行参数 < mode.SetMode()）
+mode = "debug"
+# 统一时区设置。项目中的时间获取请使用xtime.Now()
+timezone = "Local"
+# 容器关闭最大等待时间。支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为0
+shutdownMaxWaitTime = "0s"
+
+# 集群节点配置
+[cluster.node]
+    # 实例ID，集群中唯一。不填写默认自动生成唯一的实例ID
+    id = ""
+    # 实例名称
+    name = "hall"
+    # 编解码器。可选：json | proto。默认为proto
+    codec = "proto"
+    # 节点权重，用于节点无状态路由消息的加权轮询策略，权重值必需大于0才生效。默认为1
+    weight = 1
+    # 内建RPC服务器监听地址。不填写默认随机监听
+    addr = ":0"
+    # 是否将内建RPC通信地址暴露到公网。默认为false
+    expose = false
+    # 任务队列大小，默认4096
+    taskQueueSize = 4096
+    # 任务写入超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认0s（不超时）
+    taskWriteTimeout = "0s"
+    # 消息队列大小，默认10240
+    messageQueueSize = 10240
+    # 消息写入超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认0s（不超时）
+    messageWriteTimeout = "0s"
+    # 集群内RPC连接器配置
+    [cluster.node.linker]
+        # RPC连接数，默认5
+        connNum = 5
+        # RPC调用超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为3s
+        callTimeout = "3s"
+        # RPC拨号超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为3s
+        dialTimeout = "3s"
+        # RPC拨号重试次数，默认3
+        dialRetryTimes = 3
+        # RPC连接故障恢复时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为5s
+        faultRecoveryTime = "5s"
+        # 命令队列大小，默认4096
+        commandQueueSize = 4096
+        # 命令写入超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认0s（不超时）
+        commandWriteTimeout = "0s"
+
+# 任务池模块
+[task]
+    # 任务池大小(goroutine)
+    size = 100000
+    # 是否非阻塞
+    nonblocking = true
+    # 是否禁用清除。
+    disablePurge = true
+
+# pprof模块
+[pprof]
+    # pprof服务器监听地址
+    addr = ":0"
+
+# GRPC客户端相关配置
+[transport.grpc.client]
+    # CA证书文件
+    caFile = ""
+    # 证书域名
+    serverName = ""
+    # 分发策略。支持策略：随机（random）、轮询（rr）、加权轮询（wrr）、一致性哈希（ch）。默认为rr
+    dispatch = "rr"
+
+# 框架默认打包器统一采用以下的打包格式，自定义打包器可自行定义打包规则
+# 心跳包
+# ------------------------------------------------------------------------------
+# | size(4 byte) = (1 byte + 8 byte) | header(1 byte) | heartbeat time(8 byte) |
+# ------------------------------------------------------------------------------
+#
+#  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+# +---------------------------------------------------------------+-+-------------+---------------------------------------------------------------+
+# |                              size                             |h|   extcode   |                      heartbeat time (ns)                      |
+# +---------------------------------------------------------------+-+-------------+---------------------------------------------------------------+
+
+# 数据包
+# -----------------------------------------------------------------------------------------------------------------------
+# | size(4 byte) = (1 byte + n byte + m byte + x byte) | header(1 byte) | route(n byte) | seq(m byte) | message(x byte) |
+# -----------------------------------------------------------------------------------------------------------------------
+#
+#  0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7 0 1 2 3 4 5 6 7
+# +---------------------------------------------------------------+-+-------------+-------------------------------+-------------------------------+
+# |                              size                             |h|   extcode   |             route             |              seq              |
+# +---------------------------------------------------------------+-+-------------+-------------------------------+-------------------------------+
+# |                                                                message data ...                                                               |
+# +-----------------------------------------------------------------------------------------------------------------------------------------------+
+[packet]
+    # 字节序，默认为big。可选：little | big
+    byteOrder = "big"
+    # 路由字节数，默认为2字节
+    routeBytes = 2
+    # 序列号字节数，默认为2字节
+    seqBytes = 2
+    # 消息字节数，默认为5000字节
+    bufferBytes = 5000
+    # 是否携带服务器心跳时间
+    heartbeatTime = false
+
+# 日志模块
+[log]
+    # 日志输出级别，可选：debug | info | warn | error | fatal | panic
+    level = "info"
+    # 堆栈的最低输出级别，可选：debug | info | warn | error | fatal | panic
+    stackLevel = "error"
+    # 时间格式，标准库时间格式
+    timeFormat = "2006/01/02 15:04:05.000000"
+    # 输出栈的跳过深度
+    callSkip = 2
+    # 是否启用调用文件全路径
+    callFullPath = true
+    # 日志输出终端（数组和对象两种配置形式任选其一）
+    terminals = ["console", "file"]
+    # 控制台同步器配置
+    [log.console]
+        # 日志输出格式，可选：text | json
+        format = "text"
+    # 文件同步器配置
+    [log.file]
+        # 输出文件路径
+        path = "./log/due.log"
+        # 日志输出格式，可选：text | json
+        format = "text"
+        # 文件最大留存时间，d:天、h:时、m:分、s:秒
+        maxAge = "7d"
+        # 文件最大尺寸限制，支持单位： B | K | KB | M | MB | G | GB | T | TB | P | PB | E | EB | Z | ZB，默认为100M
+        maxSize = "100M"
+        # 缓冲区大小，支持单位： B | K | KB | M | MB | G | GB | T | TB | P | PB | E | EB | Z | ZB，默认为32K
+        bufferSize = "32K"
+        # 文件翻转方式，可选：none | year | month | week | day | hour，默认为none
+        rotate = "none"
+        # 文件翻转时是否对文件进行压缩
+        compress = false
+
+# nacos注册中心
+[registry.nacos]
+    # 服务器地址 [scheme://]ip:port[/nacos]。默认为["http://127.0.0.1:8848/nacos"]
+    urls = ["http://127.0.0.1:8848/nacos"]
+    # 集群名称。默认为DEFAULT
+    clusterName = "DEFAULT"
+    # 群组名称。默认为DEFAULT_GROUP
+    groupName = "DEFAULT_GROUP"
+    # 请求Nacos服务端超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为3秒
+    timeout = "3s"
+    # ACM的命名空间Id。默认为空
+    namespaceId = ""
+    # 当使用ACM时，需要该配置，默认为空。详见：https://help.aliyun.com/document_detail/130146.html
+    endpoint = ""
+    # ACM&KMS的regionId，用于配置中心的鉴权。默认为空
+    regionId = ""
+    # ACM&KMS的AccessKey，用于配置中心的鉴权。默认为空
+    accessKey = ""
+    # ACM&KMS的SecretKey，用于配置中心的鉴权。默认为空
+    secretKey = ""
+    # 是否开启kms，同时DataId必须以"cipher-"作为前缀才会启动加解密逻辑。kms可以参考文档：https://help.aliyun.com/product/28933.html
+    openKMS = false
+    # 缓存service信息的目录。默认为./run/nacos/naming/cache
+    cacheDir = "./run/nacos/naming/cache"
+    # Nacos服务端的API鉴权Username。默认为空
+    username = ""
+    # Nacos服务端的API鉴权Password。默认为空
+    password = ""
+    # 日志存储路径。默认为./run/nacos/naming/log
+    logDir = "./run/nacos/naming/log"
+    # 日志输出级别，可选：debug、info、warn、error。默认为info
+    logLevel = "info"
+
+# nacos配置中心
+[config.nacos]
+    # 读写模式。可选：read-only | write-only | read-write，默认为read-only
+    mode = "read-only"
+    # 服务器地址 [scheme://]ip:port[/nacos]。默认为["http://127.0.0.1:8848/nacos"]
+    urls = ["http://127.0.0.1:8848/nacos"]
+    # 集群名称。默认为DEFAULT
+    clusterName = "DEFAULT"
+    # 群组名称。默认为DEFAULT_GROUP
+    groupName = "DEFAULT_GROUP"
+    # 请求Nacos服务端超时时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为10秒
+    timeout = "10s"
+    # Nacos客户端心跳间隔，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为5秒
+    heartbeat = "5s"
+    # ACM的命名空间Id。默认为空
+    namespaceId = ""
+    # 当使用ACM时，需要该配置，默认为空。详见：https://help.aliyun.com/document_detail/130146.html
+    endpoint = ""
+    # ACM&KMS的regionId，用于配置中心的鉴权。默认为空
+    regionId = ""
+    # ACM&KMS的AccessKey，用于配置中心的鉴权。默认为空
+    accessKey = ""
+    # ACM&KMS的SecretKey，用于配置中心的鉴权。默认为空
+    secretKey = ""
+    # 是否开启kms，同时DataId必须以"cipher-"作为前缀才会启动加解密逻辑。kms可以参考文档：https://help.aliyun.com/product/28933.html
+    openKMS = false
+    # 缓存service信息的目录。默认为./run/nacos/config/cache
+    cacheDir = "./run/nacos/config/cache"
+    # Nacos服务端的API鉴权Username。默认为空
+    username = ""
+    # Nacos服务端的API鉴权Password。默认为空
+    password = ""
+    # 日志存储路径。默认为./run/nacos/config/log
+    logDir = "./run/nacos/config/log"
+    # 日志输出级别，可选：debug、info、warn、error。默认为info
+    logLevel = "info"
+
+# redis定位模块
+[locate.redis]
+    # 客户端连接地址
+    addrs = ["127.0.0.1:6379"]
+    # 数据库号
+    db = 0
+    # 用户名
+    username = ""
+    # 密码
+    password = ""
+    # 私钥文件
+    keyFile = ""
+    # 证书文件
+    certFile = ""
+    # CA证书文件
+    caFile = ""
+    # 最大重试次数
+    maxRetries = 3
+    # key前缀
+    prefix = "due:locate"
+
+# redis分布式锁模块
+[lock.redis]
+    # 客户端连接地址
+    addrs = ["127.0.0.1:6379"]
+    # 数据库号
+    db = 0
+    # 用户名
+    username = ""
+    # 密码
+    password = ""
+    # 私钥文件
+    keyFile = ""
+    # 证书文件
+    certFile = ""
+    # CA证书文件
+    caFile = ""
+    # 最大重试次数
+    maxRetries = 3
+    # key前缀
+    prefix = "due:lock"
+    # 锁过期时间（自动续约），支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为3s
+    expiration = "3s"
+    # 循环获取锁的频率间隔时间，支持单位：纳秒（ns）、微秒（us | µs）、毫秒（ms）、秒（s）、分（m）、小时（h）、天（d）。默认为20ms
+    acquireInterval = "20ms"
+    # 循环获取锁的最大重试次数，默认为0，<=0则为无限次
+    acquireMaxRetries = 0
+
+# redis事件总线模块
+[eventbus.redis]
+    # 客户端连接地址
+    addrs = ["127.0.0.1:6379"]
+    # 数据库号
+    db = 0
+    # 用户名
+    username = ""
+    # 密码
+    password = ""
+    # 私钥文件
+    keyFile = ""
+    # 证书文件
+    certFile = ""
+    # CA证书文件
+    caFile = ""
+    # 最大重试次数
+    maxRetries = 3
+    # key前缀
+    prefix = "due:eventbus"

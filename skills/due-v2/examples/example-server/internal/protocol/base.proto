@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package base;
+
+option go_package = "example-server/internal/protocol/base;base";
+
+// 通用错误响应。约定：所有响应消息都应把本消息作为第 1 个字段，
+// 便于客户端统一处理错误码（对应 common.Code）。
+message Res {
+  int32 code = 1;     // 错误码（common.Code）
+  string message = 2; // 错误描述
+}

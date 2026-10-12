@@ -1,0 +1,15 @@
+# 运行时产物
+run/
+log/
+*.pid
+
+# 编译产物
+bin/
+main
+
+# 构建期生成的配置（由 build.sh 从 internal/share/etc 复制而来）
+etc/etc.*.toml
+
+# IDE
+.idea/
+.vscode/

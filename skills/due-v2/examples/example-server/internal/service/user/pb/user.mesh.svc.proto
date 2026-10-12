@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "example-server/internal/service/user/pb;pb";
+
+// 用户微服务（Mesh）。服务名与 client 的 discovery:// 域名保持一致。
+service User {
+  // 拉取用户信息
+  rpc FetchUser(FetchUserArgs) returns (FetchUserReply);
+  // 修改昵称
+  rpc UpdateNickname(UpdateNicknameArgs) returns (UpdateNicknameReply);
+}
+
+message FetchUserArgs {
+  int64 uid = 1; // 用户ID
+}
+
+message FetchUserReply {
+  int64 uid = 1;       // 用户ID
+  string nickname = 2; // 昵称
+  string avatar = 3;   // 头像
+}
+
+message UpdateNicknameArgs {
+  int64 uid = 1;       // 用户ID
+  string nickname = 2; // 新昵称
+}
+
+message UpdateNicknameReply {
+  int32 code = 1; // 错误码
+}

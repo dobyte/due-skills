@@ -30,7 +30,8 @@ Due v2 框架完整开发参考，内容包括：
 - 核心模块：网络通信、服务注册、用户定位、RPC 传输、加密签名、分布式锁、缓存、配置中心、事件总线和日志组件。
 - 集群服务：网关服务器、节点服务器、网格服务器、Web 服务器和客户端。
 - 三方集成：GORM、Redis、MongoDB、JWT 和 Casbin。
-- 示例代码：`skills/due-v2/examples/` 下提供多个可运行示例。
+- 工程规范：从零搭建项目的架构、目录、命名、协议、构建与交付、配置规范。
+- 示例代码：`skills/due-v2/examples/` 下提供多个可运行示例（含多服务项目骨架 `examples/example-server/`）。
 
 ## 使用示例
 
@@ -46,4 +47,8 @@ Use the due-v2 skill to explain how gate binding and node binding work.
 
 ```text
 Use the due-v2 skill to choose the right runtime mode and configuration pattern for a production deployment.
+```
+
+```text
+Use the due-v2 skill to scaffold a multi-service Due project skeleton.
 ```

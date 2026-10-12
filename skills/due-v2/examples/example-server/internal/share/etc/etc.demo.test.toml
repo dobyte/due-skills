@@ -1,0 +1,39 @@
+# 共享配置样例。命名：internal/share/etc/etc.<project>.<environment>.toml
+# 构建/部署时由 build.sh 复制为 <service>/etc/etc.<environment>.toml，不随仓库提交。
+
+mode = "release"
+timezone = "Local"
+shutdownMaxWaitTime = "30s"
+
+[log]
+    level = "info"
+    stackLevel = "error"
+    timeFormat = "2006/01/02 15:04:05.000000"
+    callSkip = 2
+    callFullPath = true
+    terminals = ["console", "file"]
+    [log.console]
+        format = "json"
+    [log.file]
+        path = "./log/due.log"
+        format = "json"
+        maxAge = "7d"
+        maxSize = "100M"
+        rotate = "day"
+        compress = true
+
+[registry.nacos]
+    urls = ["http://nacos:8848/nacos"]
+    clusterName = "DEFAULT"
+    groupName = "DEFAULT_GROUP"
+    timeout = "3s"
+    namespaceId = "demo-server"
+    cacheDir = "./run/nacos/naming/cache"
+    logDir = "./run/nacos/naming/log"
+    logLevel = "info"
+
+[locate.redis]
+    addrs = ["redis:6379"]
+    db = 0
+    maxRetries = 3
+    prefix = "due:locate"

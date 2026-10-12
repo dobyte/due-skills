@@ -50,7 +50,7 @@ component := gate.NewGate(
 
 Key configuration sections in `etc/etc.toml`:
 
-- **Cluster Gate**: Instance settings, RPC timeout, dispatch strategy
+- **Cluster Gate**: Instance settings, dispatch strategy
 - **TCP Server**: Listen address `:3553`, max connections, heartbeat
 - **Redis Locator**: User location tracking
 - **Consul Registry**: Service discovery

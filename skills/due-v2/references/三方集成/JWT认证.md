@@ -342,13 +342,13 @@ func main() {
 func AuthMiddleware(j *jwt.JWT) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			token, err := j.ExtractToken(r)
+			token, err := j.Http().ExtractToken(r)
 			if err != nil {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			payload, err := j.ExtractPayload(token)
+			payload, err := j.ExtractPayload(token.Token)
 			if err != nil {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return

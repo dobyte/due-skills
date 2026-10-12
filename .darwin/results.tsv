@@ -1,0 +1,8 @@
+timestamp	commit	skill	old_score	new_score	status	dimension	note	eval_mode
+2026-10-12T18:27	-	due-v2	-	67.7	baseline	-	初始评估:9维静态+2prompt子agent实测(带/不带skill对比)	full_test
+2026-10-12T18:27	-	due-v2	67.7	68.9	keep	dim7	一致性修复:运行模式3→4、路由注册写法、packet前缀说明	dry_run
+2026-10-12T18:27	-	due-v2	68.9	70.7	keep	dim9	SKILL.md新增「反模式(不要做)」聚合段	dry_run
+2026-10-12T18:27	-	due-v2	70.7	72.1	keep	dim1	description补「何时使用」触发词	dry_run
+2026-10-12T18:27	-	due-v2	72.1	81.1	keep	dim2/3/4	新增使用流程+CHECKPOINT+失败分支表;独立子agent复评净增益	full_test
+2026-10-12T18:27	-	due-v2	81.1	82.8	keep	dim5	P0补漏+示例metadata/timeout清理+规范适用范围+dispatch回归纠正;源码核对	full_test
+2026-10-12T18:27	-	due-v2	82.8	82.8	keep	-	复审:基于v2.6.2源码11/11核对通过,无新增问题	full_test
