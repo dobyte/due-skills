@@ -25,7 +25,7 @@ license: MIT
 
 ## 关键约定(速查)
 
-> 以下约定已对照框架源码(当前版本 `v2.6.2`)核实,编写代码前请先确认,避免使用不存在的 API。**本技能包不含框架源码**;需复核时用 `go mod download github.com/dobyte/due/v2@v2.6.2` 拉取对应版本(或查 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2))。**文档与源码冲突时,一律以源码为准。**
+> 以下约定已对照框架源码(当前版本 `v2.6.3`,对应 `v2-feature-main` 分支)核实,编写代码前请先确认,避免使用不存在的 API。**本技能包不含框架源码**;需复核时用 `go mod download github.com/dobyte/due/v2@v2.6.3` 拉取对应版本(发布前可用 `go get github.com/dobyte/due/v2@v2-feature-main` 拉取,或查 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2))。**文档与源码冲突时,一律以源码为准。**
 
 - **集群实例类型**:`Gate` / `Node` / `Mesh`(另有预留的 `Master`)。
 - **实例状态**:`Shut` / `Work` / `Busy` / `Hang`;`SetState` 只在 `Work`/`Busy` 间切换,`Close` → `Hang`,`Destroy` → `Shut`。
@@ -82,6 +82,8 @@ license: MIT
 | [配置中心](references/核心模块/配置中心.md) | File/Consul/Etcd/Nacos 配置中心 |
 | [事件总线](references/核心模块/事件总线.md) | Process/NATS/Redis/Kafka 事件总线 |
 | [日志组件](references/核心模块/日志组件.md) | 多终端日志组件(控制台、文件、云日志) |
+| [任务池](references/核心模块/任务池.md) | 全局任务池与任务组(ErrGroup) |
+| [性能分析](references/核心模块/性能分析.md) | PProf 性能分析组件 |
 
 ## 集群服务(references/集群服务/)
 

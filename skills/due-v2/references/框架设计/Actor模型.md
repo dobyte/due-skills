@@ -127,6 +127,17 @@ if !ok {
 }
 ```
 
+### 读取 Actor 处理器（actor.Processor）
+
+获取 Actor 当前关联的处理器；Actor 已销毁时返回 nil（需 due v2.6.3+）：
+
+```go
+processor := actor.Processor()
+if processor == nil {
+    // Actor 已被销毁
+}
+```
+
 ### 消息投递（actor.Next）
 
 将上下文消息投递到指定 Actor 处理：
@@ -215,7 +226,7 @@ group.AddRouteHandler(route.Create, c.create, node.AuthorizedRoute)
 mkdir actor-example
 cd actor-example
 go mod init actor-example
-go get github.com/dobyte/due/v2@v2.6.2
+go get github.com/dobyte/due/v2@v2.6.3
 go get github.com/dobyte/due/locate/redis/v2
 go get github.com/dobyte/due/registry/consul/v2
 ```

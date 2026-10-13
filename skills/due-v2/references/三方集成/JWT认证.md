@@ -36,8 +36,8 @@ Due 框架通过 [dobyte/jwt](https://github.com/dobyte/jwt) 库集成 JWT（JSO
 | `store.caFile` | string | TLS CA 证书文件路径，默认空 |
 | `store.maxRetries` | int | 网络错误最大重试次数，默认 3 次 |
 | `store.poolSize` | int | 最大连接池大小，默认 200 |
-| `store.minIdleConns` | int | 最小空闲连接数，默认 10 |
-| `store.dialTimeout` | string | 拨号超时时间，默认 `5s` |
+| `store.minIdleConns` | int | 最小空闲连接数，默认 20 |
+| `store.dialTimeout` | string | 拨号超时时间，默认 `3s` |
 | `store.idleTimeout` | string | 连接最大空闲时间，默认 `0s` |
 | `store.readTimeout` | string | 读超时时间，默认 `1s` |
 | `store.writeTimeout` | string | 写超时时间，默认 `1s` |
@@ -76,9 +76,9 @@ Due 框架通过 [dobyte/jwt](https://github.com/dobyte/jwt) 库集成 JWT（JSO
         maxRetries = 3
         # 最大连接池限制，默认为200个连接
         poolSize = 200
-        # 最小空闲连接数，默认10个连接
+        # 最小空闲连接数
         minIdleConns = 10
-        # 拨号超时时间，默认5s
+        # 拨号超时时间
         dialTimeout = "5s"
         # 连接最大空闲时间，默认0s
         idleTimeout = "0s"

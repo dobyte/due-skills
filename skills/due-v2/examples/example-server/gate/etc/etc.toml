@@ -100,7 +100,7 @@ shutdownMaxWaitTime = "0s"
         format = "text"
         # 文件最大留存时间，d:天、h:时、m:分、s:秒
         maxAge = "7d"
-        # 文件最大尺寸限制，支持单位： B | K | KB | M | MB | G | GB | T | TB | P | PB | E | EB | Z | ZB，默认为100M
+        # 文件最大尺寸限制，支持单位： B | K | KB | M | MB | G | GB | T | TB | P | PB | E | EB | Z | ZB，默认为500M
         maxSize = "100M"
         # 缓冲区大小，支持单位： B | K | KB | M | MB | G | GB | T | TB | P | PB | E | EB | Z | ZB，默认为32K
         bufferSize = "32K"

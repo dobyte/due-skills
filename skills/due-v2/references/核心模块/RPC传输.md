@@ -88,6 +88,10 @@ func main() {
     serverName = ""
     # 连接池大小，默认为10
     poolSize = 10
+    # 分发策略。支持策略：随机（random）、轮询（rr）、加权轮询（wrr）、一致性哈希（ch）。默认为rr
+    dispatch = "rr"
+    # 失败处理模式。可选：0 Failover（故障转移）| 1 Failfast（快速失败）| 2 Failtry（失败重试）| 3 Failbackup（备份调用），默认为2
+    failMode = 2
 ```
 
 ### 使用示例
@@ -183,7 +187,7 @@ func (s *Server) Init() {
     s.proxy.AddServiceProvider("greeter", &pb.Greeter_ServiceDesc, s)
 }
 
-func (s *Server) Hello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
+func (s *Server) Hello(_ context.Context, args *pb.HelloArgs) (*pb.HelloReply, error) {
     return &pb.HelloReply{Message: "Hello " + req.Name}, nil
 }
 
