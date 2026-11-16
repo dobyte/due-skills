@@ -28,7 +28,7 @@ license: MIT
 
 ## 关键约定(速查)
 
-> 以下约定已对照框架源码(当前版本 `v2.6.3`,对应 `v2-feature-main` 分支)核实,编写代码前请先确认,避免使用不存在的 API。**本技能包不含框架源码**;需复核时用 `go mod download github.com/dobyte/due/v2@v2.6.3` 拉取对应版本(发布前可用 `go get github.com/dobyte/due/v2@v2-feature-main` 拉取,或查 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2))。**文档与源码冲突时,一律以源码为准。**
+> 以下约定已对照框架源码(当前版本 `v2.6.8`,对应 `v2-feature-main` 分支)核实,编写代码前请先确认,避免使用不存在的 API。**本技能包不含框架源码**;需复核时用 `go mod download github.com/dobyte/due/v2@v2.6.8` 拉取对应版本(发布前可用 `go get github.com/dobyte/due/v2@v2-feature-main` 拉取,或查 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2))。**文档与源码冲突时,一律以源码为准。**
 
 - **集群实例类型**:`Gate` / `Node` / `Mesh`(另有预留的 `Master`)。
 - **实例状态**:`Shut` / `Work` / `Busy` / `Hang`;`SetState` 只在 `Work`/`Busy` 间切换,`Close` → `Hang`,`Destroy` → `Shut`。
@@ -41,6 +41,10 @@ license: MIT
 - **通信协议**:数据包 `size(4)|header(1)|route(n)|seq(m)|message(x)`,其中 `size = 1 + n + m + len(message)`(不含 4 字节 size 自身);header bit7=心跳、bit6=心跳时间;配置键前缀 `etc.packet.*`(对应 `etc.toml` 中的 `[packet]` 段)。
 - **会话类型**:`session.Conn` / `session.User`。
 - **用户定位**:`locate` 包,默认 Redis 实现;配置前缀 `locate.redis`(默认 `prefix = "due:locate"`)。
+- **限流**:`limiter` 子模块(v2.6.7 新增):顶层 `limiter`(Maker/Limiter 抽象,包路径 `github.com/dobyte/due/v2/limiter`)、`limiter/memory`(进程内 token bucket,32 分片 FNV-1a,WithPrefix/WithCleanupInterval)、独立子模块 `limiter/redis/v2`(Redis Lua token bucket,含熔断 + FailOpen/FailClosed)。Gate 内置 per-connection GCRA 限流器(v2.6.7,独立实现 `cluster/gate/limiter.go`,配置 key `etc.cluster.gate.limiter.{quota,period,burst,closeThreshold}`,Go Option `WithLimiterQuota(float64)` 等,与 limiter 子模块完全解耦)。
+- **IPv6 双栈监听**(v2.6.7):`:port` 与 `[::]:port` 在 TCP/WS/KCP/QUIC 全部默认双栈;`0.0.0.0:port` 仍只监听 IPv4。Net 层通过 `core/net.ListenNetwork` 选择 tcp4/udp4 或 tcp/udp。
+- **连接安全关闭**:`Conn.CloseIf(connectionID)` 用于可能被连接池复用的安全关闭(v2.6.7)。`Connect`/`Disconnect` 事件串行化、Connect handler 在 read goroutine 上运行、hook panic 隔离(defer Done)。
+- **实例注册串行化**(v2.6.7):`Gate`/`Node`/`Mesh` 的 `Register`/`Refresh`/`Deregister` 统一由 registry mutex 串行化,避免销毁后重注册;`Close` 时同步关闭 linker 缓存的 RPC 客户端。
 
 ## 反模式(不要做)
 
@@ -82,6 +86,7 @@ license: MIT
 | [加密签名](references/核心模块/加密签名.md) | RSA/ECC 加密与签名算法 |
 | [分布式锁](references/核心模块/分布式锁.md) | Redis/Memcache 分布式锁实现 |
 | [缓存方案](references/核心模块/缓存方案.md) | Redis/Memcache 缓存方案 |
+| [限流器](references/核心模块/限流器.md) | 令牌桶 Limiter（memory/redis 后端）+ Gate 内置 GCRA 连接限流 |
 | [配置中心](references/核心模块/配置中心.md) | File/Consul/Etcd/Nacos 配置中心 |
 | [事件总线](references/核心模块/事件总线.md) | Process/NATS/Redis/Kafka 事件总线 |
 | [日志组件](references/核心模块/日志组件.md) | 多终端日志组件(控制台、文件、云日志) |
