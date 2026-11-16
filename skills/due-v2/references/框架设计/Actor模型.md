@@ -226,7 +226,7 @@ group.AddRouteHandler(route.Create, c.create, node.AuthorizedRoute)
 mkdir actor-example
 cd actor-example
 go mod init actor-example
-go get github.com/dobyte/due/v2@v2.6.3
+go get github.com/dobyte/due/v2@v2.6.8
 go get github.com/dobyte/due/locate/redis/v2
 go get github.com/dobyte/due/registry/consul/v2
 ```
