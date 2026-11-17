@@ -1,6 +1,6 @@
 # Due v2 框架参考文档索引
 
-> **框架版本**：v2.6.8（本文档基于 Due v2.6.8 源码编写，与 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2) v2.6.8 API 对齐）。
+> **框架版本**：v2.6.8（本文档基于 Due v2.6.8 源码编写，与 [pkg.go.dev/github.com/dobyte/due/v2](https://pkg.go.dev/github.com/dobyte/due/v2) v2.6.8 API 对齐）。各版本差异见 [版本更新摘要](框架设计/版本更新摘要.md)。
 
 本目录包含 Due v2 框架所有模块的参考文档。
 
@@ -31,6 +31,7 @@ references/
 | 10 | [运行模式](框架设计/运行模式.md) | debug/test/pre-release/release 模式 |
 | 11 | [错误处理](框架设计/错误处理.md) | 错误与错误码设计 |
 | 12 | [滚动更新](框架设计/滚动更新.md) | 不停服滚动更新方案 |
+| 13 | [版本更新摘要](框架设计/版本更新摘要.md) | v2.6.3 ~ v2.6.8 各版本功能项与升级清单 |
 
 ## 核心模块
 

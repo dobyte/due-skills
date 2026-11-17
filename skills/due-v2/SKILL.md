@@ -1,9 +1,9 @@
 ---
 name: due-v2
 slug: due-v2
-version: 1.0.0
+version: 1.1.0
 displayName: Due v2 框架开发指南
-description: Due v2 高性能分布式游戏服务器框架完整开发指南。涵盖框架设计(架构、协议、路由、并发模型、滚动更新)、核心模块(网络、注册中心、用户定位、RPC传输、加密、分布式锁、缓存、配置中心、事件总线、日志)、集群服务(网关服务器、节点服务器、网格服务器、Web服务器、客户端)、三方集成(GORM、Redis、MongoDB、JWT、Casbin)、工程规范(从零搭建项目的架构、目录、命名、协议、构建与交付、配置)。为Go语言分布式游戏服务器开发者提供完整的框架设计理念、最佳实践和丰富示例。当用户使用 due/due-v2 框架进行 Go 分布式游戏服务器开发、搭建项目骨架、查阅框架模块用法或核对 API 时使用。
+description: Due v2 高性能分布式游戏服务器框架完整开发指南。涵盖框架设计(架构、协议、路由、并发模型、滚动更新)、核心模块(网络、注册中心、用户定位、RPC传输、加密、分布式锁、缓存、配置中心、事件总线、日志)、集群服务(网关服务器、节点服务器、网格服务器、Web服务器、客户端)、三方集成(GORM、Redis、MongoDB、JWT、Casbin)、工程规范(从零搭建项目的架构、目录、命名、协议、构建与交付、配置)。为Go语言分布式游戏服务器开发者提供完整的框架设计理念、最佳实践和丰富示例，并汇总 v2.6.3 ~ v2.6.8 各版本功能项与 Breaking Changes。当用户使用 due/due-v2 框架进行 Go 分布式游戏服务器开发、搭建项目骨架、查阅框架模块用法、核对 API 或排查版本升级兼容性时使用。
 license: MIT
 ---
 
@@ -13,7 +13,7 @@ license: MIT
 
 ## 使用流程
 
-1. **分类任务** — 概念/设计类问题 → 直接查 `references/` 对应文档;从零搭建 → 读 `references/工程规范/` 并对照 `examples/example-server/`;具体编码 → 先读下方「关键约定」,再查对应模块文档与 `examples/` 示例。
+1. **分类任务** — 概念/设计类问题 → 直接查 `references/` 对应文档;跨版本升级/兼容性 → 先读 [版本更新摘要](references/框架设计/版本更新摘要.md);从零搭建 → 读 `references/工程规范/` 并对照 `examples/example-server/`;具体编码 → 先读下方「关键约定」,再查对应模块文档与 `examples/` 示例。
 2. **核对 API(🔴 CHECKPOINT)** — 编码前用「关键约定」+ 对应 reference 核对 API 名 / 签名 / 配置键,**禁止凭记忆写**;涉及协议改动(`.proto`)、路由号段分配或生产配置(`release` / 注册中心 / 定位)时,先与用户确认再落代码。
 3. **复用示例** — 优先取 `examples/` 中最接近的可运行示例做增量改造,而非从零编写。
 4. **自查反模式** — 交付前对照下方「反模式(不要做)」清单。
@@ -38,13 +38,14 @@ license: MIT
 - **路由注册**:`proxy.AddRouteHandler(route int32, handler, opts ...RouteOptions)`,等价写法 `proxy.Router().AddRouteHandler(...)`;路由组用 `proxy.RouteGroup(...)` 或 `proxy.Router().Group(...)`;中间件签名为 `func(mw *node.Middleware, ctx node.Context)`,用 `mw.Next(ctx)` 继续;**不存在 `Router.Use` 与 `ctx.Abort()`**。
 - **网关分发策略**:`etc.cluster.gate.dispatch` = `random`(默认)/ `rr` / `wrr`;**值是配置字符串**(Go 常量名为 `RoundRobin`/`WeightedRoundRobin`,但配置里写 `rr`/`wrr`)。
 - **并发模型**:节点默认单线程分发(dispatch 协程);`ctx.Task` 投递到全局协程池;`ctx.Next` 交调度器二次分发到 Actor。
-- **通信协议**:数据包 `size(4)|header(1)|route(n)|seq(m)|message(x)`,其中 `size = 1 + n + m + len(message)`(不含 4 字节 size 自身);header bit7=心跳、bit6=心跳时间;配置键前缀 `etc.packet.*`(对应 `etc.toml` 中的 `[packet]` 段)。
-- **会话类型**:`session.Conn` / `session.User`。
+- **通信协议**:数据包 `size(4)|header(1)|route(n)|seq(m)|message(x)`,其中 `size = 1 + n + m + len(message)`(不含 4 字节 size 自身);header **bit7=心跳、bit0=握手帧**(v2.6.3 起;心跳时间不再占 bit6,改由 `size` 区分:`size=1` 无时间、`size=9` 带 8 字节时间);握手帧 `header=0x01`、不带 route/seq;配置键前缀 `etc.packet.*`(对应 `etc.toml` 中的 `[packet]` 段)。
+- **会话类型**:`cluster.Session`,取值为 `cluster.Conn` / `cluster.User`(v2.6.5 起 `session` 包已移除,`session.Conn` / `session.User` / `session.Kind` 写法不再存在)。
 - **用户定位**:`locate` 包,默认 Redis 实现;配置前缀 `locate.redis`(默认 `prefix = "due:locate"`)。
-- **限流**:`limiter` 子模块(v2.6.7 新增):顶层 `limiter`(Maker/Limiter 抽象,包路径 `github.com/dobyte/due/v2/limiter`)、`limiter/memory`(进程内 token bucket,32 分片 FNV-1a,WithPrefix/WithCleanupInterval)、独立子模块 `limiter/redis/v2`(Redis Lua token bucket,含熔断 + FailOpen/FailClosed)。Gate 内置 per-connection GCRA 限流器(v2.6.7,独立实现 `cluster/gate/limiter.go`,配置 key `etc.cluster.gate.limiter.{quota,period,burst,closeThreshold}`,Go Option `WithLimiterQuota(float64)` 等,与 limiter 子模块完全解耦)。
+- **限流**:`limiter` 子模块(v2.6.7 新增):顶层 `limiter`(Maker/Limiter 抽象,包路径 `github.com/dobyte/due/v2/limiter`)、`limiter/memory`(进程内 token bucket,32 分片 FNV-1a,WithPrefix/WithCleanupInterval)、独立子模块 `limiter/redis/v2`(Redis Lua token bucket,含熔断 + FailOpen/FailClosed)。Gate 内置 per-connection GCRA 限流器(v2.6.7,独立实现 `cluster/gate/limiter.go`,配置 key `etc.cluster.gate.limiter.{quota,period,burst,closeThreshold}`,Go Option `WithLimiterQuota(float64)` 等,与 limiter 子模块完全解耦)。Gate 另有 per-IP 准入与临时封禁(v2.6.7,`[cluster.gate.guard]`,`WithGuard*` 系列 Option;默认不限制、不自动封禁)。
 - **IPv6 双栈监听**(v2.6.7):`:port` 与 `[::]:port` 在 TCP/WS/KCP/QUIC 全部默认双栈;`0.0.0.0:port` 仍只监听 IPv4。Net 层通过 `core/net.ListenNetwork` 选择 tcp4/udp4 或 tcp/udp。
 - **连接安全关闭**:`Conn.CloseIf(connectionID)` 用于可能被连接池复用的安全关闭(v2.6.7)。`Connect`/`Disconnect` 事件串行化、Connect handler 在 read goroutine 上运行、hook panic 隔离(defer Done)。
 - **实例注册串行化**(v2.6.7):`Gate`/`Node`/`Mesh` 的 `Register`/`Refresh`/`Deregister` 统一由 registry mutex 串行化,避免销毁后重注册;`Close` 时同步关闭 linker 缓存的 RPC 客户端。
+- **版本基线**:当前技能对齐 `v2.6.8`;v2.6.3 ~ v2.6.8 的功能项与 Breaking Changes 见 [版本更新摘要](references/框架设计/版本更新摘要.md)。升级前务必读「升级检查清单」。
 
 ## 反模式(不要做)
 
@@ -57,13 +58,14 @@ license: MIT
 - **错误码硬编码数字**;业务错误码必须先在 `common.proto` 登记([协议规范](references/工程规范/协议规范.md))。
 - **release 模式输出敏感调试信息**([运行模式](references/框架设计/运行模式.md))。
 - **命名 / 目录违规**(脱敏、大小写、目录越界等)([命名规范](references/工程规范/命名规范.md) / [目录规范](references/工程规范/目录规范.md))。
+- **在客户端路由 handler 返回后保留 `*client.Context`**——v2.6.5 起该上下文池化复用,handler 结束后会被重置(需要时先复制字段)。
 
 ## 框架设计(references/框架设计/)
 
 | 文档 | 说明 |
 |------|------|
 | [架构设计](references/框架设计/架构设计.md) | Due v2 整体架构概览,核心组件与分层设计 |
-| [通信协议](references/框架设计/通信协议.md) | 心跳包与数据包的协议格式设计 |
+| [通信协议](references/框架设计/通信协议.md) | 心跳帧/数据帧/握手帧的协议格式设计 |
 | [路由设计](references/框架设计/路由设计.md) | 无状态路由与有状态路由的分发机制 |
 | [配置管理](references/框架设计/配置管理.md) | 启动配置(etc)的读取、格式支持与全部配置项 |
 | [绑定网关](references/框架设计/绑定网关.md) | GID/CID/UID 三者绑定关系与消息流转 |
@@ -74,6 +76,7 @@ license: MIT
 | [运行模式](references/框架设计/运行模式.md) | debug/test/pre-release/release 四种运行模式 |
 | [错误处理](references/框架设计/错误处理.md) | 框架错误与错误码的设计与使用 |
 | [滚动更新](references/框架设计/滚动更新.md) | 网关服、节点服、网格服的滚动更新方案 |
+| [版本更新摘要](references/框架设计/版本更新摘要.md) | v2.6.3 ~ v2.6.8 各版本功能项、Breaking Changes 与升级检查清单 |
 
 ## 核心模块(references/核心模块/)
 

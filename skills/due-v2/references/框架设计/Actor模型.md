@@ -378,6 +378,25 @@ func (p *roomProcessor) play(ctx node.Context) {
 | 适用场景 | 帧同步/状态同步 | IO 密集型 | 房间类游戏 |
 | 实现复杂度 | 低 | 中 | 中高 |
 
+## 版本更新摘要
+
+### v2.6.7
+
+- **事件订阅索引**：调度器按事件索引可调度 Actor，事件分发只访问订阅者，不再扫描全部 Actor；订阅通过 Actor 任务队列注册、销毁时清理
+
+### v2.6.5
+
+- `Actor.Next` 改为显式解锁（去掉 defer），入队失败时仍回滚
+- 请求对象复用 defer 链，降低每消息开销（内部实现）
+
+### v2.6.4
+
+- **Breaking**：`Actor.AddRouteHandler` 参数固定为 `int32`，v2.6.3 的泛型写法收回
+
+### v2.6.3
+
+- 新增 `Actor.Processor() Processor`：读锁下返回处理器，Actor 销毁后返回 nil
+
 ## 源码参考
 
 完整示例代码：[actor-example](https://github.com/dobyte/due-docs/tree/master/examples/actor-example)

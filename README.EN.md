@@ -27,6 +27,7 @@ Repository-level entrypoint for the Due framework skill collection.
 Complete Due v2 framework development reference, including:
 
 - Framework design: architecture, communication protocols, routing, configuration, runtime modes, error handling, concurrency models, actor model, and rolling updates.
+- Release notes: feature items, breaking changes, and upgrade checklist for v2.6.3 through v2.6.8.
 - Core modules: networking, service registration, user locating, RPC transport, cryptography, distributed locks, cache, configuration center, event bus, and logging.
 - Cluster services: gate server, node server, mesh server, web server, and client usage.
 - Third-party integrations: GORM, Redis, MongoDB, JWT, and Casbin.

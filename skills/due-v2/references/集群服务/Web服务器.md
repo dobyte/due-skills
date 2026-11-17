@@ -353,6 +353,8 @@ func authMiddleware(ctx fiber.Ctx) error {
 
 框架还内置了基于 RFC 2617 的 Digest 认证中间件（`github.com/dobyte/due/component/http/v2/middleware/digestauth`），可通过 `digestauth.New(digestauth.Config{...})` 创建后作为中间件或路由分组中间件使用。
 
+> **v2.6.3 安全加固**：Digest nonce 绑定实际请求目标（方法 + URI），跨 URI 重放会被拒绝；随机源不可用时拒绝生成 nonce，而不是降级。
+
 ## 最佳实践
 
 1. **路由设计**:
@@ -375,9 +377,21 @@ func authMiddleware(ctx fiber.Ctx) error {
    - 合理设置body大小限制
    - 根据服务器配置调整并发数
 
+## 版本更新摘要
+
+### v2.6.4 ~ v2.6.8
+
+- Web 组件 API 与配置无变化，仅子模块依赖对齐
+
+### v2.6.3
+
+**安全修复**：
+- Digest 认证 nonce 绑定请求目标（方法 + URI），拒绝跨 URI 重放
+- 熵源失败时拒绝生成 nonce，避免使用弱随机数
+
 ## 相关文件
 
-- Web源码：`github.com/dobyte/due/component/http/`
-- Swagger中间件：`github.com/dobyte/due/component/http/swagger/`
-- Digest认证中间件：`github.com/dobyte/due/component/http/middleware/digestauth/`
+- Web源码：`github.com/dobyte/due/component/http/v2`
+- Swagger中间件：`github.com/dobyte/due/component/http/v2/swagger`
+- Digest认证中间件：`github.com/dobyte/due/component/http/v2/middleware/digestauth`
 - Fiber文档：https://docs.gofiber.io/
