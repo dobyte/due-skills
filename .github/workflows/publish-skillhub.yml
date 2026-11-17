@@ -20,11 +20,12 @@ permissions:
   contents: write
 
 concurrency:
-  group: skillhub-due-v2
+  group: skillhub-due-skills
   cancel-in-progress: false
 
 env:
   PYTHONIOENCODING: utf-8
+  SKILLHUB_NAMESPACE: ${{ vars.SKILLHUB_NAMESPACE || 'indiv-dobyte' }}
 
 jobs:
   publish:
@@ -43,13 +44,31 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Resolve online version
+        id: online
+        env:
+          SKILLHUB_KEY: ${{ secrets.SKILLHUB_KEY }}
+        run: |
+          if [ -z "$SKILLHUB_KEY" ]; then
+            echo "SKILLHUB_KEY secret is required" >&2
+            exit 1
+          fi
+          ONLINE=$(python release/skillhub/remote_version.py)
+          echo "version=$ONLINE" >> "$GITHUB_OUTPUT"
+          if [ -n "$ONLINE" ]; then
+            echo "Online version: $ONLINE"
+          else
+            echo "No published version found; treating as first release"
+          fi
+
       - name: Bump version
         id: version
         env:
           INPUT_MODE: ${{ github.event.inputs.mode }}
+          ONLINE: ${{ steps.online.outputs.version }}
         run: |
           MODE="${INPUT_MODE:-auto}"
-          VERSION=$(python release/skillhub/bump_version.py --mode "$MODE")
+          VERSION=$(python release/skillhub/bump_version.py --mode "$MODE" --online "$ONLINE")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Release version: $VERSION"
 
@@ -59,15 +78,15 @@ jobs:
       - name: Upload package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: skillhub-due-v2
-          path: release/skillhub/due-v2-*.zip
+          name: skillhub-due-skills
+          path: release/skillhub/due-skills-*.zip
           if-no-files-found: error
 
       - name: Commit version and package
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add skills/due-v2/SKILL.md release/skillhub/SKILL.template release/skillhub/due-v2 release/skillhub/due-v2-*.zip
+          git add skills/due-v2/SKILL.md release/skillhub/SKILL.template release/skillhub/due-skills release/skillhub/due-skills-*.zip
           if git diff --cached --quiet; then
             echo "No version/package changes to commit"
             exit 0

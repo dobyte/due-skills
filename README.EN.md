@@ -36,7 +36,7 @@ Complete Due v2 framework development reference, including:
 
 ## SkillHub package
 
-`release/skillhub/` contains the skillhub.cn adaptation of `due-v2`: Markdown-only references (44 files, about 420KB) that satisfy the platform's root `SKILL.md`, file-type, per-file, total-size, and file-count limits. See [release/skillhub/README.md](release/skillhub/README.md) for build/publish commands and the release checklist; the GitHub Actions workflow is [publish-skillhub.yml](.github/workflows/publish-skillhub.yml), which bumps the patch version and publishes on every documentation update.
+`release/skillhub/` contains the skillhub.cn adaptation, published as the existing **`@indiv-dobyte/due-skills`** listing with the Due v2 guide: Markdown-only references (44 files, about 420KB) that satisfy the platform's root `SKILL.md`, file-type, per-file, total-size, and file-count limits. See [release/skillhub/README.md](release/skillhub/README.md) for build/publish commands and the release checklist; the GitHub Actions workflow is [publish-skillhub.yml](.github/workflows/publish-skillhub.yml), which reads the online version and bumps/publishes on every documentation update.
 
 ## Usage Examples
 

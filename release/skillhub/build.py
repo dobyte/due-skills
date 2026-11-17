@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Build the skillhub.cn release package for due-v2.
+"""Build the skillhub.cn release package for due-skills (Due v2 guide).
 
 The package is generated from:
   - release/skillhub/SKILL.template.md
   - skills/due-v2/references/**/*.md
 
 It validates the skillhub.cn constraints (frontmatter, file types, file count,
-per-file/total size, local links) and writes due-v2-<version>.zip.
+per-file/total size, local links) and writes due-skills-<version>.zip.
 """
 
 import os
@@ -22,7 +22,7 @@ REPO = BASE.parents[1]
 SRC = REPO / "skills" / "due-v2"
 REFS = SRC / "references"
 TEMPLATE = BASE / "SKILL.template"
-OUT = BASE / "due-v2"
+OUT = BASE / "due-skills"
 
 ALLOWED_EXT = {
     ".md", ".txt", ".json", ".yaml", ".yml", ".js", ".cjs", ".mjs",
@@ -187,9 +187,9 @@ def main() -> None:
     validate_local_links(OUT)
 
     version = meta["version"]
-    for old in BASE.glob("due-v2-*.zip"):
+    for old in BASE.glob("due-skills-*.zip"):
         old.unlink()
-    zip_path = BASE / ("due-v2-" + version + ".zip")
+    zip_path = BASE / ("due-skills-" + version + ".zip")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for path in files:
             relative = path.relative_to(OUT).as_posix()

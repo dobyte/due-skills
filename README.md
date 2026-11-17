@@ -36,7 +36,7 @@ Due v2 框架完整开发参考，内容包括：
 
 ## SkillHub 发布包
 
-`release/skillhub/` 提供 `due-v2` 面向 skillhub.cn 的适配包：仅含 Markdown 参考文档（44 个文件、约 420KB），符合平台的根 `SKILL.md`、文件类型、单文件大小、总包大小与文件数量限制。发布命令、构建脚本与检查清单见 [release/skillhub/README.md](release/skillhub/README.md)；GitHub Actions 工作流见 [publish-skillhub.yml](.github/workflows/publish-skillhub.yml)，会在每次文档更新后自动递增 patch 版本并发布。
+`release/skillhub/` 提供面向 skillhub.cn 的适配包，发布为现有的 **`@indiv-dobyte/due-skills`** 列表（内容为 Due v2 指南）：仅含 Markdown 参考文档（44 个文件、约 420KB），符合平台的根 `SKILL.md`、文件类型、单文件大小、总包大小与文件数量限制。发布命令、构建脚本与检查清单见 [release/skillhub/README.md](release/skillhub/README.md)；GitHub Actions 工作流见 [publish-skillhub.yml](.github/workflows/publish-skillhub.yml)，会读取线上版本，在每次文档更新后自动递增版本并发布。
 
 ## 使用示例
 

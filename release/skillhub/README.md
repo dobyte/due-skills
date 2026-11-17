@@ -1,6 +1,6 @@
-# SkillHub 发布版（due-v2）
+# SkillHub 发布版（due-skills）
 
-本目录存放 `due-v2` 技能面向 **skillhub.cn** 的适配包与发布工作流。
+本目录存放 **`due-skills`** 技能面向 **skillhub.cn** 的适配包与发布工作流（内容为 Due v2 框架指南，更新现有 `@indiv-dobyte/due-skills` 列表）。
 
 ## 为什么需要单独适配
 
@@ -21,11 +21,12 @@
 ```
 release/skillhub/
 ├── SKILL.template             # SkillHub 专用 SKILL.md 源（手工维护，无 .md 后缀避免被链接检查）
-├── build.py                   # 生成 due-v2/ 与 zip，并校验全部限制
+├── build.py                   # 生成 due-skills/ 与 zip，并校验全部限制
 ├── bump_version.py            # 自动递增版本（auto/patch/minor/major/none）
+├── remote_version.py          # 读取 skillhub.cn 线上最新版本
 ├── publish.py                 # 调用官方 skillhub CLI 做 dry-run / 发布
-├── due-v2/                    # build.py 生成的可发布目录
-├── due-v2-1.1.0.zip           # build.py 生成的上传包
+├── due-skills/                # build.py 生成的可发布目录
+├── due-skills-1.1.0.zip       # build.py 生成的上传包
 └── README.md
 ```
 
@@ -41,9 +42,27 @@ build.py 会：
 2. 校验模板 `version` 与 `skills/due-v2/SKILL.md` 一致（不一致直接失败）；
 3. 复制 `skills/due-v2/references/*.md`，把 `README.MD` 重命名为 `README.md`；
 4. 校验文件类型、文件数量、单文件/总大小、隐藏文件与包内相对链接；
-5. 生成 `due-v2/` 与 `due-v2-<version>.zip`（zip 使用 `/` 分隔、UTF-8 文件名）。
+5. 生成 `due-skills/` 与 `due-skills-<version>.zip`（zip 使用 `/` 分隔、UTF-8 文件名）。
 
 当前包统计（由 build.py 输出）：44 个文件、约 420KB、最大单文件约 23KB。
+
+## 线上版本解析
+
+[remote_version.py](remote_version.py) 调用 SkillHub.cn API：
+
+```text
+GET /api/v1/auth/me                     -> 解析发布者 handle
+GET /api/v1/skills/{slug}?namespace=…   -> latestVersion.version
+```
+
+工作流会先读取线上版本，再通过 `bump_version.py --online <version>` 决定新版本：
+
+- 本地版本高于线上 → 直接发布本地版本；
+- 本地版本等于线上 → patch +1；
+- 本地版本低于线上 → 从线上版本 patch +1；
+- 查不到线上版本（首次发布）→ 当前版本 patch +1。
+
+需要 `SKILLHUB_KEY`；默认 slug `due-skills`、namespace `indiv-dobyte`，可用 `SKILLHUB_SLUG` / `SKILLHUB_NAMESPACE` 覆盖。公开技能可加 `--allow-anonymous --namespace <handle>` 查询；本地证书链异常时可加 `--insecure` 仅用于诊断。
 
 ## 本地发布
 
@@ -69,7 +88,7 @@ $env:SKILLHUB_KEY = "skh_xxx"
 python release/skillhub/publish.py --changelog "v1.1.1: 更新内容"
 ```
 
-publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.cn`，然后 `skillhub publish ./release/skillhub/due-v2 --host https://api.skillhub.cn`；不会打印 Key。
+publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.cn`，然后 `skillhub publish ./release/skillhub/due-skills --host https://api.skillhub.cn`；不会打印 Key。
 
 ## GitHub Actions（自动版本 + 发布）
 
@@ -91,7 +110,7 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 
 **自动流程**：
 
-1. `bump_version.py` 递增版本，同时写入 `skills/due-v2/SKILL.md` 与 `SKILL.template`；
+1. `remote_version.py` 读取线上版本，`bump_version.py` 按本地/线上版本决定并写入 `skills/due-v2/SKILL.md` 与 `SKILL.template`；
 2. `build.py` 生成并校验发布包；
 3. 提交版本号、生成目录与 zip，commit message 带 `[skip ci]`；
 4. 调用 `publish.py` 发布到 skillhub.cn；
@@ -101,14 +120,16 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 
 **前置条件**：
 
-- 首次接入前确认 `SKILL.template` 与 `skills/due-v2/SKILL.md` 的 `version` 等于线上最新版本；若线上版本更高，先把两处改成线上版本，避免自动 bump 后撞上已发布版本。
+- 现有列表为 `@indiv-dobyte/due-skills`（线上 1.0.0）；`slug` 固定 `due-skills`，工作流默认 namespace 为 `indiv-dobyte`。
+- 当前本地版本 `1.1.0` 高于线上 `1.0.0`，首次运行会直接发布 `1.1.0`，不会额外跳号；之后每次文档更新再 patch +1。
+- 若线上版本高于本地，先把 `SKILL.template` 与 `skills/due-v2/SKILL.md` 改成线上版本，避免撞版本。
 - 仓库 Secret `SKILLHUB_KEY`（`skh_` 开头）；
 - 允许 GitHub Actions 写入 `main`（branch protection 需放行）；
-- 工作流自动安装官方 `skillhub` CLI，并上传 `due-v2-*.zip` artifact。
+- 工作流自动安装官方 `skillhub` CLI，并上传 `due-skills-*.zip` artifact。
 
 ## Web UI 上传
 
-打开 <https://skillhub.cn/dashboard/publish>，上传 `release/skillhub/due-v2-<version>.zip`。zip 根目录即 `SKILL.md`，无需再套一层目录。
+打开 <https://skillhub.cn/dashboard/publish>，上传 `release/skillhub/due-skills-<version>.zip`。zip 根目录即 `SKILL.md`，无需再套一层目录。
 
 ## 更新流程
 
@@ -126,7 +147,7 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 ## 发布前检查清单
 
 - [ ] `SKILL.md` 顶层包含 `slug`、`version`、`displayName`（SkillHub.cn 硬性要求）
-- [ ] `slug` 为 `due-v2`（kebab-case，2–128 字符；发布后不可改）
+- [ ] `slug` 为 `due-skills`（kebab-case，2–128 字符；发布后不可改）
 - [ ] `version` 已递增且为合法 SemVer，且与主技能一致
 - [ ] `summary`、`tags`、`homepage`、`license` 已填写
 - [ ] `tags` 使用行内列表 `[a, b, c]`

@@ -1,6 +1,6 @@
 ---
-name: due-v2
-slug: due-v2
+name: due-skills
+slug: due-skills
 version: 1.1.0
 displayName: Due v2 分布式游戏服务器框架开发指南
 description: Due v2 高性能分布式游戏服务器框架开发指南。覆盖框架设计、核心模块、集群服务、三方集成与工程规范，并汇总 v2.6.3 ~ v2.6.8 各版本功能项与升级要点。适用于 Go 分布式游戏服务器开发、项目搭建、模块查阅、API 核对与版本升级排查。

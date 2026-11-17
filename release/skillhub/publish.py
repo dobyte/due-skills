@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and publish the due-v2 SkillHub package.
+"""Build and publish the due-skills SkillHub package (Due v2 guide).
 
 Usage:
   python release/skillhub/publish.py --dry-run
@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
-PACKAGE = BASE / "due-v2"
+PACKAGE = BASE / "due-skills"
 DEFAULT_HOST = "https://api.skillhub.cn"
 
 
@@ -35,9 +35,9 @@ def run(command, secret_index=None) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Build and publish due-v2 to skillhub.cn")
+    parser = argparse.ArgumentParser(description="Build and publish due-skills to skillhub.cn")
     parser.add_argument("--dry-run", action="store_true", help="only build and run skillhub metadata validation")
-    parser.add_argument("--no-build", action="store_true", help="reuse the existing release/skillhub/due-v2 package")
+    parser.add_argument("--no-build", action="store_true", help="reuse the existing release/skillhub/due-skills package")
     parser.add_argument("--changelog", default="", help="changelog text for this version")
     parser.add_argument("--host", default=os.environ.get("SKILLHUB_HOST", DEFAULT_HOST))
     args = parser.parse_args()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bump the due-v2 version for the automatic SkillHub release workflow.
+"""Bump the due-v2 docs version for the due-skills SkillHub workflow.
 
 The version is stored in both:
   - skills/due-v2/SKILL.md
@@ -80,8 +80,9 @@ def previous_version() -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Bump due-v2 SkillHub version")
+    parser = argparse.ArgumentParser(description="Bump the due-skills SkillHub version")
     parser.add_argument("--mode", choices=["auto", "none", "patch", "minor", "major"], default="auto")
+    parser.add_argument("--online", default="", help="published version on SkillHub (used as a floor)")
     parser.add_argument("--dry-run", action="store_true", help="print the target version without writing")
     args = parser.parse_args()
 
@@ -93,11 +94,34 @@ def main() -> None:
             % (main_version, template_version)
         )
 
+    online = args.online.strip()
+    if online and not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+$", online):
+        fail("invalid --online version: " + online)
+
+    def version_key(value: str):
+        return tuple(int(item) for item in value.split("."))
+
+    effective = main_version
+    if online and version_key(online) > version_key(effective):
+        effective = online
+
     if args.mode == "none":
         target = main_version
     elif args.mode == "auto":
         previous = previous_version()
-        if previous and previous != main_version:
+        if online:
+            if version_key(main_version) > version_key(online):
+                print(
+                    "local version %s is ahead of online %s; publishing it"
+                    % (main_version, online),
+                    file=sys.stderr,
+                )
+                target = main_version
+            elif version_key(main_version) == version_key(online):
+                target = bump(main_version, "patch")
+            else:
+                target = bump(effective, "patch")
+        elif previous and previous != main_version:
             print(
                 "HEAD already changed version %s -> %s; keeping it"
                 % (previous, main_version),
@@ -105,9 +129,9 @@ def main() -> None:
             )
             target = main_version
         else:
-            target = bump(main_version, "patch")
+            target = bump(effective, "patch")
     else:
-        target = bump(main_version, args.mode)
+        target = bump(effective, args.mode)
 
     if not args.dry_run and target != main_version:
         write_version(MAIN_SKILL, target)
