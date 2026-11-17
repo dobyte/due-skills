@@ -123,8 +123,8 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 
 **前置条件**：
 
-- 现有列表为 `@indiv-dobyte/due-skills`（线上 1.0.0）；`slug` 固定 `due-skills`，工作流默认 namespace 为 `indiv-dobyte`。
-- 当前本地版本 `1.1.0` 高于线上 `1.0.0`，首次运行会直接发布 `1.1.0`，不会额外跳号；之后每次文档更新再 patch +1。
+- 现有列表为 `@indiv-dobyte/due-skills`（线上 1.1.0）；`slug` 固定 `due-skills`，工作流默认 namespace 为 `indiv-dobyte`。
+- 当前本地版本与线上均为 `1.1.0`，下一次文档更新会自动发布 `1.1.1`。
 - 若线上版本高于本地，先把 `SKILL.template` 与 `skills/due-v2/SKILL.md` 改成线上版本，避免撞版本。
 - 仓库 Secret `SKILLHUB_KEY`（`skh_` 开头）；
 - 允许 GitHub Actions 写入 `main`（branch protection 需放行）；
