@@ -27,6 +27,7 @@ release/skillhub/
 ├── publish.py                 # 调用官方 skillhub CLI 做 dry-run / 发布
 ├── due-skills/                # build.py 生成的可发布目录
 ├── due-skills-1.1.0.zip       # build.py 生成的上传包
+├── submitted-version.txt      # 最后一次成功提交审核的版本
 └── README.md
 ```
 
@@ -114,9 +115,11 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 2. `build.py` 生成并校验发布包；
 3. 提交版本号、生成目录与 zip，commit message 带 `[skip ci]`；
 4. 调用 `publish.py` 发布到 skillhub.cn；
-5. 成功后创建 `skillhub-v<version>` tag（tag 失败不阻塞发布）。
+5. 发布成功后把版本写入 `submitted-version.txt` 并提交，作为下次版本判断的基线。
 
 **失败重试**：版本提交发生在发布之前，所以发布失败时 main 上已经是新版本；重新运行 `mode=auto` 会沿用当前版本重试，不会再次递增。
+
+**审核等待**：SkillHub 的版本更新可能需要审核。若 `submitted-version.txt` 中的版本高于线上公开版本，工作流会判定为“审核中”并跳过本次发布，避免重复提交；审核通过、线上版本追平后，下一次更新会继续递增。若审核被拒，需要手动删除或修改 `submitted-version.txt`。
 
 **前置条件**：
 
@@ -125,7 +128,8 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 - 若线上版本高于本地，先把 `SKILL.template` 与 `skills/due-v2/SKILL.md` 改成线上版本，避免撞版本。
 - 仓库 Secret `SKILLHUB_KEY`（`skh_` 开头）；
 - 允许 GitHub Actions 写入 `main`（branch protection 需放行）；
-- 工作流自动安装官方 `skillhub` CLI，并上传 `due-skills-*.zip` artifact。
+- 工作流自动安装官方 `skillhub` CLI，并上传 `due-skills-*.zip` artifact；
+- 审核中的版本不会重复提交，避免平台拒绝。
 
 ## Web UI 上传
 
@@ -140,7 +144,7 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
 2. 提交文档改动并 push 到 `main`；自动工作流会：
    - 将 patch 版本 +1（若本次提交已手动改版本则沿用）；
    - 重新构建、提交版本号与 zip；
-   - 发布到 skillhub.cn 并打 `skillhub-v<version>` tag。
+   - 发布到 skillhub.cn，并把版本记录到 `submitted-version.txt`。
 3. 如果只想本地验证，运行 `python release/skillhub/publish.py --dry-run`。
 4. 如果自动发布失败：修复原因后手动运行工作流，`mode=auto`（沿用当前版本重试）或 `mode=none`。
 

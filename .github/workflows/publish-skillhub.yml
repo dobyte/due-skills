@@ -61,8 +61,34 @@ jobs:
             echo "No published version found; treating as first release"
           fi
 
+      - name: Check pending review
+        id: pending
+        env:
+          ONLINE: ${{ steps.online.outputs.version }}
+        run: |
+          SUBMITTED=""
+          if [ -f release/skillhub/submitted-version.txt ]; then
+            SUBMITTED=$(tr -d '[:space:]' < release/skillhub/submitted-version.txt)
+          fi
+          PENDING=false
+          if [ -n "$ONLINE" ] && [ -n "$SUBMITTED" ] && [ "$SUBMITTED" != "$ONLINE" ]; then
+            HIGHEST=$(printf '%s\n%s\n' "$SUBMITTED" "$ONLINE" | sort -V | tail -n1)
+            if [ "$HIGHEST" = "$SUBMITTED" ]; then
+              PENDING=true
+              echo "Version $SUBMITTED is pending review; online is $ONLINE. Skipping until it is approved."
+            fi
+          fi
+          echo "pending=$PENDING" >> "$GITHUB_OUTPUT"
+          {
+            echo "## SkillHub release"
+            echo "- Online: ${ONLINE:-none}"
+            echo "- Submitted: ${SUBMITTED:-none}"
+            echo "- Pending: $PENDING"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Bump version
         id: version
+        if: steps.pending.outputs.pending != 'true'
         env:
           INPUT_MODE: ${{ github.event.inputs.mode }}
           ONLINE: ${{ steps.online.outputs.version }}
@@ -73,9 +99,11 @@ jobs:
           echo "Release version: $VERSION"
 
       - name: Build and validate
+        if: steps.pending.outputs.pending != 'true'
         run: python release/skillhub/build.py
 
       - name: Upload package artifact
+        if: steps.pending.outputs.pending != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: skillhub-due-skills
@@ -83,6 +111,7 @@ jobs:
           if-no-files-found: error
 
       - name: Commit version and package
+        if: steps.pending.outputs.pending != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -95,12 +124,14 @@ jobs:
           git push origin HEAD:main
 
       - name: Install SkillHub CLI
+        if: steps.pending.outputs.pending != 'true'
         run: |
           curl -fsSL https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/install.sh | bash -s -- --cli-only
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/skillhub" --version
 
       - name: Publish to skillhub.cn
+        if: steps.pending.outputs.pending != 'true'
         env:
           SKILLHUB_KEY: ${{ secrets.SKILLHUB_KEY }}
         run: |
@@ -110,13 +141,15 @@ jobs:
           fi
           python release/skillhub/publish.py --no-build --changelog "Release v${{ steps.version.outputs.version }}"
 
-      - name: Tag release
-        continue-on-error: true
+      - name: Record submitted version
+        if: steps.pending.outputs.pending != 'true'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          if git rev-parse "skillhub-v$VERSION" >/dev/null 2>&1; then
-            echo "Tag skillhub-v$VERSION already exists"
+          printf '%s\n' "$VERSION" > release/skillhub/submitted-version.txt
+          git add release/skillhub/submitted-version.txt
+          if git diff --cached --quiet; then
+            echo "Submitted version already recorded"
             exit 0
           fi
-          git tag "skillhub-v$VERSION"
-          git push origin "skillhub-v$VERSION"
+          git commit -m "chore(skillhub): mark v$VERSION submitted [skip ci]"
+          git push origin HEAD:main
