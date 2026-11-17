@@ -34,6 +34,10 @@ Complete Due v2 framework development reference, including:
 - Engineering conventions: how to start a Due project from scratch (architecture, layout, naming, protocol, build and delivery, configuration).
 - Runnable examples under `skills/due-v2/examples/` (including a multi-service project skeleton at `examples/example-server/`).
 
+## SkillHub package
+
+`release/skillhub/` contains the skillhub.cn adaptation of `due-v2`: Markdown-only references (44 files, about 420KB) that satisfy the platform's root `SKILL.md`, file-type, per-file, total-size, and file-count limits. See [release/skillhub/README.md](release/skillhub/README.md) for build/publish commands and the release checklist; the GitHub Actions workflow is [publish-skillhub.yml](.github/workflows/publish-skillhub.yml).
+
 ## Usage Examples
 
 After installing, ask your AI agent to use the `due-v2` skill for Due framework tasks, for example:

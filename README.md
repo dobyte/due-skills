@@ -34,6 +34,10 @@ Due v2 框架完整开发参考，内容包括：
 - 工程规范：从零搭建项目的架构、目录、命名、协议、构建与交付、配置规范。
 - 示例代码：`skills/due-v2/examples/` 下提供多个可运行示例（含多服务项目骨架 `examples/example-server/`）。
 
+## SkillHub 发布包
+
+`release/skillhub/` 提供 `due-v2` 面向 skillhub.cn 的适配包：仅含 Markdown 参考文档（44 个文件、约 420KB），符合平台的根 `SKILL.md`、文件类型、单文件大小、总包大小与文件数量限制。发布命令、构建脚本与检查清单见 [release/skillhub/README.md](release/skillhub/README.md)；GitHub Actions 工作流见 [publish-skillhub.yml](.github/workflows/publish-skillhub.yml)。
+
 ## 使用示例
 
 安装后，可以让 AI Agent 使用 `due-v2` 技能处理 Due 框架相关任务，例如：

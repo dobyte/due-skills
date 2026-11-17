@@ -1,0 +1,62 @@
+name: Publish SkillHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to skillhub.cn (false = dry-run only)"
+        required: true
+        type: boolean
+        default: false
+      changelog:
+        description: "Changelog passed to skillhub publish"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skillhub-due-v2
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build and validate package
+        run: python release/skillhub/build.py
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-due-v2
+          path: release/skillhub/due-v2-*.zip
+          if-no-files-found: error
+
+      - name: Install SkillHub CLI
+        run: |
+          curl -fsSL https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/install.sh | bash -s -- --cli-only
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/skillhub" --version
+
+      - name: Dry-run metadata validation
+        run: skillhub publish ./release/skillhub/due-v2 --host https://api.skillhub.cn --dry-run --json
+
+      - name: Publish to skillhub.cn
+        if: ${{ inputs.publish }}
+        env:
+          SKILLHUB_KEY: ${{ secrets.SKILLHUB_KEY }}
+          CHANGELOG: ${{ inputs.changelog }}
+        run: python release/skillhub/publish.py --no-build --changelog "$CHANGELOG"
