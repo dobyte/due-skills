@@ -22,6 +22,7 @@
 release/skillhub/
 ├── SKILL.template             # SkillHub 专用 SKILL.md 源（手工维护，无 .md 后缀避免被链接检查）
 ├── build.py                   # 生成 due-v2/ 与 zip，并校验全部限制
+├── bump_version.py            # 自动递增版本（auto/patch/minor/major/none）
 ├── publish.py                 # 调用官方 skillhub CLI 做 dry-run / 发布
 ├── due-v2/                    # build.py 生成的可发布目录
 ├── due-v2-1.1.0.zip           # build.py 生成的上传包
@@ -52,31 +53,58 @@ build.py 会：
 python release/skillhub/publish.py --dry-run
 ```
 
-正式发布（`SKILLHUB_KEY` 为 `skh_` 开头的 API Key）：
+正式发布前先递增版本（本地 `publish.py` 不会自动 bump）：
 
 ```bash
+python release/skillhub/bump_version.py --mode patch
 export SKILLHUB_KEY=skh_xxx
-python release/skillhub/publish.py --changelog "v1.1.0: SkillHub 首发"
+python release/skillhub/publish.py --changelog "v1.1.1: 更新内容"
 ```
 
 PowerShell：
 
 ```powershell
+python release/skillhub/bump_version.py --mode patch
 $env:SKILLHUB_KEY = "skh_xxx"
-python release/skillhub/publish.py --changelog "v1.1.0: SkillHub 首发"
+python release/skillhub/publish.py --changelog "v1.1.1: 更新内容"
 ```
 
 publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.cn`，然后 `skillhub publish ./release/skillhub/due-v2 --host https://api.skillhub.cn`；不会打印 Key。
 
-## GitHub Actions 工作流
+## GitHub Actions（自动版本 + 发布）
 
 工作流文件：[.github/workflows/publish-skillhub.yml](../../.github/workflows/publish-skillhub.yml)
 
-- 手动触发（workflow_dispatch）；
-- 输入 `publish=false`（默认）只构建、上传 artifact 并做 dry-run，不发布；
-- 输入 `publish=true` 才会调用 `publish.py` 正式发布；
-- 需要在仓库 Secrets 中配置 `SKILLHUB_KEY`（`skh_` 开头）；
-- 工作流会自动安装官方 `skillhub` CLI，并上传 `due-v2-*.zip` 作为 artifact。
+**自动触发**：push 到 `main` 且改动以下路径时执行：
+
+- `skills/due-v2/SKILL.md`
+- `skills/due-v2/references/**`
+- `release/skillhub/SKILL.template`
+
+**手动触发**：workflow_dispatch，`mode` 可选：
+
+| mode | 行为 |
+|------|------|
+| `auto`（默认） | HEAD 已改过版本则沿用；否则 patch +1 |
+| `none` | 不递增，发布当前版本（用于失败重试） |
+| `patch` / `minor` / `major` | 强制递增对应位 |
+
+**自动流程**：
+
+1. `bump_version.py` 递增版本，同时写入 `skills/due-v2/SKILL.md` 与 `SKILL.template`；
+2. `build.py` 生成并校验发布包；
+3. 提交版本号、生成目录与 zip，commit message 带 `[skip ci]`；
+4. 调用 `publish.py` 发布到 skillhub.cn；
+5. 成功后创建 `skillhub-v<version>` tag（tag 失败不阻塞发布）。
+
+**失败重试**：版本提交发生在发布之前，所以发布失败时 main 上已经是新版本；重新运行 `mode=auto` 会沿用当前版本重试，不会再次递增。
+
+**前置条件**：
+
+- 首次接入前确认 `SKILL.template` 与 `skills/due-v2/SKILL.md` 的 `version` 等于线上最新版本；若线上版本更高，先把两处改成线上版本，避免自动 bump 后撞上已发布版本。
+- 仓库 Secret `SKILLHUB_KEY`（`skh_` 开头）；
+- 允许 GitHub Actions 写入 `main`（branch protection 需放行）；
+- 工作流自动安装官方 `skillhub` CLI，并上传 `due-v2-*.zip` artifact。
 
 ## Web UI 上传
 
@@ -88,10 +116,12 @@ publish.py 内部执行：`skillhub login --key ... --host https://api.skillhub.
    - 保留 SkillHub 专用 frontmatter；
    - 同步主 `SKILL.md` 的「关键约定」、模块表与版本基线；
    - `## 示例代码` 段保留 GitHub 链接，不恢复本地 `examples/` 链接。
-2. 升级 `SKILL.template` 与 `skills/due-v2/SKILL.md` 的 `version`（两者必须一致；已发布版本不可覆盖）。
-3. 运行 `python release/skillhub/build.py` 重新生成目录与 zip。
-4. 提交 `SKILL.template`、生成物（如需要）与代码改动。
-5. 运行工作流或本地 `publish.py` 发布。
+2. 提交文档改动并 push 到 `main`；自动工作流会：
+   - 将 patch 版本 +1（若本次提交已手动改版本则沿用）；
+   - 重新构建、提交版本号与 zip；
+   - 发布到 skillhub.cn 并打 `skillhub-v<version>` tag。
+3. 如果只想本地验证，运行 `python release/skillhub/publish.py --dry-run`。
+4. 如果自动发布失败：修复原因后手动运行工作流，`mode=auto`（沿用当前版本重试）或 `mode=none`。
 
 ## 发布前检查清单
 

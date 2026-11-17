@@ -1,41 +1,59 @@
 name: Publish SkillHub
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/due-v2/SKILL.md'
+      - 'skills/due-v2/references/**'
+      - 'release/skillhub/SKILL.template'
   workflow_dispatch:
     inputs:
-      publish:
-        description: "Publish to skillhub.cn (false = dry-run only)"
+      mode:
+        description: "Version mode"
         required: true
-        type: boolean
-        default: false
-      changelog:
-        description: "Changelog passed to skillhub publish"
-        required: false
-        type: string
-        default: ""
+        type: choice
+        options: [auto, none, patch, minor, major]
+        default: auto
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: skillhub-due-v2
   cancel-in-progress: false
 
+env:
+  PYTHONIOENCODING: utf-8
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Build and validate package
+      - name: Bump version
+        id: version
+        env:
+          INPUT_MODE: ${{ github.event.inputs.mode }}
+        run: |
+          MODE="${INPUT_MODE:-auto}"
+          VERSION=$(python release/skillhub/bump_version.py --mode "$MODE")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Release version: $VERSION"
+
+      - name: Build and validate
         run: python release/skillhub/build.py
 
       - name: Upload package artifact
@@ -45,18 +63,41 @@ jobs:
           path: release/skillhub/due-v2-*.zip
           if-no-files-found: error
 
+      - name: Commit version and package
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add skills/due-v2/SKILL.md release/skillhub/SKILL.template release/skillhub/due-v2 release/skillhub/due-v2-*.zip
+          if git diff --cached --quiet; then
+            echo "No version/package changes to commit"
+            exit 0
+          fi
+          git commit -m "chore(skillhub): release v${{ steps.version.outputs.version }} [skip ci]"
+          git push origin HEAD:main
+
       - name: Install SkillHub CLI
         run: |
           curl -fsSL https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/install/install.sh | bash -s -- --cli-only
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           "$HOME/.local/bin/skillhub" --version
 
-      - name: Dry-run metadata validation
-        run: skillhub publish ./release/skillhub/due-v2 --host https://api.skillhub.cn --dry-run --json
-
       - name: Publish to skillhub.cn
-        if: ${{ inputs.publish }}
         env:
           SKILLHUB_KEY: ${{ secrets.SKILLHUB_KEY }}
-          CHANGELOG: ${{ inputs.changelog }}
-        run: python release/skillhub/publish.py --no-build --changelog "$CHANGELOG"
+        run: |
+          if [ -z "$SKILLHUB_KEY" ]; then
+            echo "SKILLHUB_KEY secret is required" >&2
+            exit 1
+          fi
+          python release/skillhub/publish.py --no-build --changelog "Release v${{ steps.version.outputs.version }}"
+
+      - name: Tag release
+        continue-on-error: true
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if git rev-parse "skillhub-v$VERSION" >/dev/null 2>&1; then
+            echo "Tag skillhub-v$VERSION already exists"
+            exit 0
+          fi
+          git tag "skillhub-v$VERSION"
+          git push origin "skillhub-v$VERSION"
